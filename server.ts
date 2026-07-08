@@ -5463,8 +5463,7 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
   }
 }
 
-if (!process.env.VERCEL) {
-  startServer();
-}
+// Always start the server to register routes and middlewares under Vercel serverless context
+startServer();
 
 export default app;
