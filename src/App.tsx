@@ -290,7 +290,7 @@ export default function App() {
     if (p === "/services") return "home"; // solutions
     if (p === "/vendors") return "vendor-panel";
     if (p === "/categories") return "home"; // solution categories are shown on home
-    if (p === "/blog" || p === "/blogs") return "blogs";
+    if (p === "/blog" || p === "/blogs" || p.startsWith("/blog/")) return "blogs";
     if (p === "/privacy-policy") return "privacy";
     if (p === "/terms-and-conditions") return "terms";
     if (p === "/dashboard") return "dashboard";
@@ -301,6 +301,7 @@ export default function App() {
     if (p === "/login") return "login";
     if (p === "/signup") return "signup";
     if (p === "/compare" || p === "/directory" || p === "/compare-platforms") return "compare-platforms";
+    if (p.startsWith("/sourcing/")) return "sourcing-landing";
     return "home";
   };
 
@@ -601,10 +602,16 @@ export default function App() {
 
     // Scroll to top on route transitions
     window.scrollTo({ top: 0, behavior: "smooth" });
-    if (location.pathname !== "/blog") {
+    if (!location.pathname.startsWith("/blog")) {
       setSelectedBlog(null);
+    } else if (location.pathname.startsWith("/blog/")) {
+      const slug = location.pathname.substring("/blog/".length).toLowerCase().trim();
+      const found = blogs.find(b => (b.slug || "").toLowerCase() === slug || String(b.id) === slug);
+      if (found) {
+        setSelectedBlog(found);
+      }
     }
-  }, [location.pathname, products]);
+  }, [location.pathname, products, blogs]);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [prefilledCategory, setPrefilledCategory] = useState<string | undefined>(undefined);
@@ -3029,19 +3036,13 @@ export default function App() {
           {!currentUser ? (
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => {
-                  setAuthModalTab('login');
-                  setAuthModalOpen(true);
-                }}
+                onClick={() => setActiveTab('login')}
                 className="text-[#0066FF] hover:bg-blue-50 font-bold px-3 py-2 rounded-lg text-xs transition-all cursor-pointer"
               >
                 Login
               </button>
               <button 
-                onClick={() => {
-                  setAuthModalTab('signup');
-                  setAuthModalOpen(true);
-                }}
+                onClick={() => setActiveTab('signup')}
                 className="bg-[#0066FF] hover:bg-blue-700 text-white font-extrabold px-3 py-2 rounded-lg text-xs transition-all cursor-pointer shadow-xs"
               >
                 Sign Up
@@ -3155,8 +3156,7 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-2">
                     <button 
                       onClick={() => {
-                        setAuthModalTab('login');
-                        setAuthModalOpen(true);
+                        setActiveTab('login');
                         setMobileMenuOpen(false);
                       }}
                       className="w-full text-center border border-slate-200 text-[#0066FF] hover:bg-blue-50 font-bold py-2.5 rounded-lg text-sm transition-all cursor-pointer"
@@ -3165,8 +3165,7 @@ export default function App() {
                     </button>
                     <button 
                       onClick={() => {
-                        setAuthModalTab('signup');
-                        setAuthModalOpen(true);
+                        setActiveTab('signup');
                         setMobileMenuOpen(false);
                       }}
                       className="w-full text-center bg-[#0066FF] hover:bg-blue-700 text-white font-extrabold py-2.5 rounded-lg text-sm transition-all cursor-pointer shadow-xs"
@@ -3291,6 +3290,89 @@ export default function App() {
                   currentUser={currentUser}
                   reviews={reviews}
                   onAddReview={handleAddReview}
+                />
+              </motion.div>
+            )}
+
+            {/* Products and Category directory list view */}
+            {(activeTab === 'products' || activeTab === 'category') && (
+              <motion.div
+                key="products-view"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
+              >
+                <ProductsView
+                  products={products}
+                  categories={categories}
+                  onPostLead={handlePostLead}
+                  currentUser={currentUser}
+                  onAddToWishlist={handleAddToWishlist}
+                  wishlist={wishlist}
+                />
+              </motion.div>
+            )}
+
+            {/* Full-screen Login page view */}
+            {activeTab === 'login' && (
+              <motion.div
+                key="login-page"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
+              >
+                <LoginPage
+                  authEmail={authEmail}
+                  setAuthEmail={setAuthEmail}
+                  authPassword={authPassword}
+                  setAuthPassword={setAuthPassword}
+                  authRole={authRole}
+                  setAuthRole={setAuthRole}
+                  handleLoginSubmit={handleLoginSubmit}
+                  handleGoogleAuth={handleGoogleAuth}
+                  authLoading={authLoading}
+                  isForgotPasswordView={isForgotPasswordView}
+                  setIsForgotPasswordView={setIsForgotPasswordView}
+                  forgotPasswordEmail={forgotPasswordEmail}
+                  setForgotPasswordEmail={setForgotPasswordEmail}
+                  forgotPasswordLoading={forgotPasswordLoading}
+                  forgotPasswordError={forgotPasswordError}
+                  forgotPasswordSuccess={forgotPasswordSuccess}
+                  setForgotPasswordSuccess={setForgotPasswordSuccess}
+                  handleForgotPasswordSubmit={handleForgotPasswordSubmit}
+                />
+              </motion.div>
+            )}
+
+            {/* Full-screen Signup page view */}
+            {activeTab === 'signup' && (
+              <motion.div
+                key="signup-page"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
+              >
+                <SignupPage
+                  signUpName={signUpName}
+                  setSignUpName={setSignUpName}
+                  signUpEmail={signUpEmail}
+                  setSignUpEmail={setSignUpEmail}
+                  signUpPassword={signUpPassword}
+                  setSignUpPassword={setSignUpPassword}
+                  signUpCompany={signUpCompany}
+                  setSignUpCompany={setSignUpCompany}
+                  signUpMobile={signUpMobile}
+                  setSignUpMobile={setSignUpMobile}
+                  signUpCity={signUpCity}
+                  setSignUpCity={setSignUpCity}
+                  signUpRole={signUpRole}
+                  setSignUpRole={setSignUpRole}
+                  handleSignUpSubmit={handleSignUpSubmit}
+                  handleGoogleAuth={handleGoogleAuth}
+                  authLoading={authLoading}
                 />
               </motion.div>
             )}
