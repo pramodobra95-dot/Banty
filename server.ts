@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import compression from "compression";
-import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import pg from "pg";
@@ -12,7 +11,7 @@ dotenv.config();
 
 const app = express();
 app.use(compression());
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Enable JSON bodies
 app.use(express.json());
@@ -5401,11 +5400,13 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
     "/admin-panel"
   ];
 
+  const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(process.cwd(), "dist"));
+
   seoPaths.forEach(seoPath => {
     app.get(seoPath, async (req, res, next) => {
       try {
         let templatePath = "";
-        if (process.env.NODE_ENV !== "production") {
+        if (!isProduction) {
           templatePath = path.join(process.cwd(), "index.html");
         } else {
           templatePath = path.join(process.cwd(), "dist", "index.html");
@@ -5422,8 +5423,9 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
     });
   });
 
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
+  if (!isProduction) {
+    const { createServer } = await import("vite");
+    const vite = await createServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
@@ -5446,12 +5448,21 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
     app.get("*", (req, res) => {
       try {
         let templatePath = path.join(distPath, "index.html");
+        if (!fs.existsSync(templatePath)) {
+          return res.status(404).send("Production build not found. Please run 'npm run build' first.");
+        }
         let baseHtml = fs.readFileSync(templatePath, "utf-8");
         const renderedHtml = getSEOPageHtml(req.path, baseHtml);
         res.header("Content-Type", "text/html");
         res.send(renderedHtml);
       } catch (err) {
-        res.sendFile(path.join(distPath, "index.html"));
+        console.error("Error serving production index.html:", err);
+        const fallbackPath = path.join(distPath, "index.html");
+        if (fs.existsSync(fallbackPath)) {
+          res.sendFile(fallbackPath);
+        } else {
+          res.status(500).send("Internal Server Error: Index file missing.");
+        }
       }
     });
   }
@@ -5464,6 +5475,9 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
 }
 
 // Always start the server to register routes and middlewares under Vercel serverless context
-startServer();
+startServer().catch(err => {
+  console.error("CRITICAL: Server failed to initialize:", err);
+  process.exit(1);
+});
 
 export default app;
