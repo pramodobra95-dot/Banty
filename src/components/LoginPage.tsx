@@ -164,7 +164,7 @@ export default function LoginPage({
         ) : (
           <div className="space-y-6">
             <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div className="space-y-1">
+              <div className="hidden space-y-1">
                 <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                   Select System Role
                 </label>

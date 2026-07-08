@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import compression from "compression";
+import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import pg from "pg";
@@ -11,7 +12,7 @@ dotenv.config();
 
 const app = express();
 app.use(compression());
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 
 // Enable JSON bodies
 app.use(express.json());
@@ -890,6 +891,7 @@ let db: {
   marketingBanners: any[];
   reviews?: any[];
   resetTokens?: Record<string, any>;
+  resendLogs?: any[];
 } = {
   categories: defaultCategories,
   vendors: defaultVendors,
@@ -908,7 +910,8 @@ let db: {
   ],
   users: defaultUsers,
   trustedVendors: defaultTrustedVendors,
-  marketingBanners: defaultMarketingBanners
+  marketingBanners: defaultMarketingBanners,
+  resendLogs: []
 };
 
 // Load Database from disk if exists
@@ -917,6 +920,9 @@ function loadDb() {
     if (fs.existsSync(DB_PATH)) {
       const raw = fs.readFileSync(DB_PATH, "utf-8");
       db = JSON.parse(raw);
+      if (!db.resendLogs) {
+        db.resendLogs = [];
+      }
       if (!db.users) {
         db.users = defaultUsers;
       }
@@ -1840,6 +1846,26 @@ const getEmailTemplate = (title: string, bodyHtml: string, ctaText?: string, cta
   `;
 };
 
+// Core email dispatcher logger helper
+const logEmailDispatch = (to: string, subject: string, htmlContent: string, status: string, details?: any) => {
+  if (!db.resendLogs) {
+    db.resendLogs = [];
+  }
+  db.resendLogs.unshift({
+    id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    recipient: to,
+    subject: subject,
+    htmlContent: htmlContent,
+    status: status,
+    details: details ? (typeof details === "object" ? JSON.stringify(details) : String(details)) : "",
+    timestamp: new Date().toISOString()
+  });
+  if (db.resendLogs.length > 100) {
+    db.resendLogs = db.resendLogs.slice(0, 100);
+  }
+  saveDb();
+};
+
 // Core email dispatcher helper
 const sendResendEmail = async (to: string, subject: string, htmlContent: string) => {
   const resend = getResendClient();
@@ -1855,6 +1881,7 @@ Subject: ${subject}
 `);
 
   if (isSimulation) {
+    logEmailDispatch(to, subject, htmlContent, "Simulation (Offline/Key Missing)", { info: "Resend API Key is not configured. Running in local simulation mode." });
     return { success: true, simulated: true };
   }
 
@@ -1874,14 +1901,17 @@ Subject: ${subject}
                                 
       if (isValidationError) {
         console.log("[Resend Sandbox Validation Bypass] Recipient email is not verified in free trial / onboarding domain. Simulating successful sandbox dispatch.");
+        logEmailDispatch(to, subject, htmlContent, "Simulation (Sandbox Validation Bypass)", err);
         return { success: true, simulated: true };
       }
 
       console.warn("[Resend SDK returned error]:", err);
+      logEmailDispatch(to, subject, htmlContent, "Failed", err);
       return { success: false, error: err };
     }
     
     console.log("[Resend Dispatch Success] Payload response:", response);
+    logEmailDispatch(to, subject, htmlContent, "Success", response);
     return { success: true, data: response };
   } catch (error: any) {
     const isValidationError = error && (
@@ -1892,10 +1922,12 @@ Subject: ${subject}
 
     if (isValidationError) {
       console.log("[Resend Sandbox Validation Bypass] Caught validation error in try/catch block. Simulating successful sandbox dispatch.");
+      logEmailDispatch(to, subject, htmlContent, "Simulation (Sandbox Validation Bypass)", error);
       return { success: true, simulated: true };
     }
 
     console.error("[Resend Dispatch Failure] Direct delivery error:", error);
+    logEmailDispatch(to, subject, htmlContent, "Failed", error.message || error);
     return { success: false, error };
   }
 };
@@ -2898,6 +2930,78 @@ app.post("/api/resend/trigger-event", async (req, res) => {
   } catch (error: any) {
     console.error("Resend Event Dispatch failure:", error);
     res.status(500).json({ error: "Email delivery failure", details: error.message });
+  }
+});
+
+// API - Get Resend Email Dispatch Logs
+app.get("/api/resend/logs", (req, res) => {
+  res.json(db.resendLogs || []);
+});
+
+// API - Retry/Resend any email
+app.post("/api/resend/retry", async (req, res) => {
+  const { recipient, subject, htmlContent } = req.body;
+  if (!recipient || !subject || !htmlContent) {
+    return res.status(400).json({ error: "Missing required fields: recipient, subject, htmlContent" });
+  }
+  try {
+    const result = await sendResendEmail(recipient, subject, htmlContent);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: "Resend failed", details: err.message });
+  }
+});
+
+// API - Trigger Custom Test Emails
+app.post("/api/resend/test", async (req, res) => {
+  const { email, type } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: "Recipient email is required" });
+  }
+  
+  try {
+    if (type === "welcome-buyer") {
+      await sendBuyerWelcomeEmail("Test Buyer Professional", email);
+    } else if (type === "welcome-vendor") {
+      await sendVendorWelcomeEmail("Test Partner Agent", "Acme Software Solutions Pvt Ltd", email);
+    } else if (type === "new-enquiry") {
+      const mockLead = {
+        id: `lead-test-${Math.floor(Math.random() * 9000) + 1000}`,
+        title: "Enterprise ERP & CRM Suite Sourcing",
+        category: "ERP Software",
+        description: "Seeking a fully integrated ERP and CRM suite supporting inventory optimization, automated pipeline validation, and real-time ledger sync.",
+        budget: "₹10,00,000 - ₹25,00,000",
+        companyName: "Zenith Global Industries Ltd",
+        contactName: "Sanjay Singhania",
+        mobile: "9812345678",
+        email: email,
+        city: "Mumbai",
+        timeline: "1-2 Months (Standard)",
+        createdAt: new Date().toISOString()
+      };
+      await sendNewEnquiryEmail(mockLead);
+    } else {
+      // Direct general test email
+      const html = getEmailTemplate(
+        "BANTConfirm Live API Verification Handshake",
+        `
+          <h1 style="color: #0f172a; font-size: 22px; font-weight: 800; margin-bottom: 8px;">Resend API Handshake Successful!</h1>
+          <p style="color: #475569; font-size: 14px; line-height: 1.6;">Hello,</p>
+          <p style="color: #475569; font-size: 14px; line-height: 1.6;">This is a premium, real-time handshake validation email dispatched directly from your BANTConfirm Sourcing application workspace using the <strong>Resend API</strong>.</p>
+          
+          <div class="card" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 18px; margin: 20px 0; border-radius: 12px;">
+            <p style="color: #16a34a; font-weight: 800; font-size: 15px; margin: 0 0 4px 0;">🚀 Resend API Connection Status: ACTIVE</p>
+            <p style="color: #14532d; font-size: 12px; margin: 0; line-height: 1.5;">Your RESEND_API_KEY environment variable is successfully recognized and validated by the BANTConfirm background automation worker.</p>
+          </div>
+          
+          <p style="color: #475569; font-size: 14px; line-height: 1.6;">Your email automation workflow is fully configured. All subsequent user signups and sourcing enquiries will trigger gorgeous, responsive transactional communications immediately.</p>
+        `
+      );
+      await sendResendEmail(email, "BANTConfirm – Resend API Integration Verified", html);
+    }
+    res.json({ success: true, message: `Test email of type '${type}' dispatched successfully to ${email}.` });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to dispatch test email", details: err.message });
   }
 });
 
@@ -5400,13 +5504,11 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
     "/admin-panel"
   ];
 
-  const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(process.cwd(), "dist"));
-
   seoPaths.forEach(seoPath => {
     app.get(seoPath, async (req, res, next) => {
       try {
         let templatePath = "";
-        if (!isProduction) {
+        if (process.env.NODE_ENV !== "production") {
           templatePath = path.join(process.cwd(), "index.html");
         } else {
           templatePath = path.join(process.cwd(), "dist", "index.html");
@@ -5423,9 +5525,8 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
     });
   });
 
-  if (!isProduction) {
-    const { createServer } = await import("vite");
-    const vite = await createServer({
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
@@ -5448,21 +5549,12 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
     app.get("*", (req, res) => {
       try {
         let templatePath = path.join(distPath, "index.html");
-        if (!fs.existsSync(templatePath)) {
-          return res.status(404).send("Production build not found. Please run 'npm run build' first.");
-        }
         let baseHtml = fs.readFileSync(templatePath, "utf-8");
         const renderedHtml = getSEOPageHtml(req.path, baseHtml);
         res.header("Content-Type", "text/html");
         res.send(renderedHtml);
       } catch (err) {
-        console.error("Error serving production index.html:", err);
-        const fallbackPath = path.join(distPath, "index.html");
-        if (fs.existsSync(fallbackPath)) {
-          res.sendFile(fallbackPath);
-        } else {
-          res.status(500).send("Internal Server Error: Index file missing.");
-        }
+        res.sendFile(path.join(distPath, "index.html"));
       }
     });
   }
@@ -5475,9 +5567,6 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
 }
 
 // Always start the server to register routes and middlewares under Vercel serverless context
-startServer().catch(err => {
-  console.error("CRITICAL: Server failed to initialize:", err);
-  process.exit(1);
-});
+startServer();
 
 export default app;

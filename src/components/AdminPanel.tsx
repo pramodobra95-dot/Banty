@@ -3,7 +3,7 @@ import {
   Users, Layers, ShoppingBag, BarChart, CheckCircle, AlertTriangle, 
   Trash2, Plus, Calendar, FileText, Globe, ToggleLeft, ToggleRight, 
   Download, ArrowUpRight, Shield, BadgeAlert, PlusCircle, CheckSquare,
-  Pencil, UploadCloud, Sparkles, Eye, BookOpen, Search
+  Pencil, UploadCloud, Sparkles, Eye, BookOpen, Search, Mail, Send, RefreshCw, ExternalLink
 } from "lucide-react";
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, PieChart, Pie, Cell 
@@ -77,7 +77,87 @@ export default function AdminPanel({
   onDeleteCategory,
   onRefreshData
 }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'products' | 'leads' | 'banners' | 'blogs' | 'cms' | 'users' | 'categories' | 'trusted-vendors' | 'marketing-banners' | 'admin-bot'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'products' | 'leads' | 'banners' | 'blogs' | 'cms' | 'users' | 'categories' | 'trusted-vendors' | 'marketing-banners' | 'admin-bot' | 'resend-emails'>('overview');
+
+  // Resend Logs state
+  const [resendLogs, setResendLogs] = useState<any[]>([]);
+  const [isLogsLoading, setIsLogsLoading] = useState(false);
+  const [testEmailInput, setTestEmailInput] = useState("pramodobra95@gmail.com");
+  const [testEmailType, setTestEmailType] = useState<"welcome-buyer" | "welcome-vendor" | "new-enquiry" | "general_handshake">("general_handshake");
+  const [isTestSending, setIsTestSending] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const fetchResendLogs = async () => {
+    setIsLogsLoading(true);
+    try {
+      const res = await fetch("/api/resend/logs");
+      if (res.ok) {
+        const data = await res.json();
+        setResendLogs(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch Resend logs:", err);
+    } finally {
+      setIsLogsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "resend-emails") {
+      fetchResendLogs();
+    }
+  }, [activeTab]);
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailInput || !testEmailInput.trim() || !testEmailInput.includes("@")) {
+      safeAlert("Please specify a valid test recipient email address (e.g. yourname@domain.com).", "warning");
+      return;
+    }
+    setIsTestSending(true);
+    try {
+      const res = await fetch("/api/resend/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: testEmailInput.trim(), type: testEmailType })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        safeAlert(`Resend API: Test email successfully processed! Destination: ${testEmailInput}`, "success");
+        fetchResendLogs();
+      } else {
+        safeAlert(`Resend Error: ${data.error || "Failed to trigger test dispatch"}`, "error");
+      }
+    } catch (err: any) {
+      safeAlert(`Network Error: ${err.message}`, "error");
+    } finally {
+      setIsTestSending(false);
+    }
+  };
+
+  const handleRetryEmail = async (logItem: any) => {
+    try {
+      safeAlert(`Re-triggering delivery to ${logItem.recipient}...`, "info");
+      const res = await fetch("/api/resend/retry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient: logItem.recipient,
+          subject: logItem.subject,
+          htmlContent: logItem.htmlContent
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        safeAlert(`Email successfully resent to ${logItem.recipient}!`, "success");
+        fetchResendLogs();
+      } else {
+        safeAlert(`Retry delivery failed: ${data.error || "Check Resend credentials"}`, "error");
+      }
+    } catch (err: any) {
+      safeAlert(`Retry network error: ${err.message}`, "error");
+    }
+  };
 
   // Admin Bot State
   const [adminBotMessages, setAdminBotMessages] = useState<any[]>([
@@ -1246,6 +1326,14 @@ export default function AdminPanel({
             }`}
           >
             Trusted Vendors ({trustedVendors.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('resend-emails')}
+            className={`px-3 py-2 rounded-md cursor-pointer transition-all shrink-0 flex items-center gap-1 font-bold ${
+              activeTab === 'resend-emails' ? 'bg-blue-600 text-white shadow-xs' : 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+            }`}
+          >
+            <Mail className="w-3.5 h-3.5" /> Resend Mail logs
           </button>
         </div>
       </div>
@@ -4571,6 +4659,283 @@ export default function AdminPanel({
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'resend-emails' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
+            <div>
+              <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">Email Delivery Engine</span>
+              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2 mt-1">
+                <Mail className="w-6 h-6 text-blue-600 animate-pulse" /> Resend.com Automation Panel
+              </h1>
+              <p className="text-slate-500 text-sm mt-1">
+                Monitor live email telemetry, inspect responsive HTML template formats, and trigger manual verification handshakes.
+              </p>
+            </div>
+            <button
+              onClick={fetchResendLogs}
+              disabled={isLogsLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-all font-semibold text-sm cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLogsLoading ? "animate-spin" : ""}`} />
+              Refresh Logs
+            </button>
+          </div>
+
+          {/* Quick Info Alerts */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800 text-sm">Resend API Credential</h4>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  The system reads <code>RESEND_API_KEY</code> from environment secrets. If absent, the engine falls back to high-fidelity console logging.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800 text-sm">Sandbox Rules</h4>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Under free Resend accounts, you must verify the destination email in your Resend Dashboard before sending. The app automatically catches sandbox limits.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800 text-sm">Responsive Design</h4>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  All transactional formats include pre-compiled CSS, clear typography matching, and mobile fluid responsive breakpoints.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Console Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Left: Handshake Tool */}
+            <div className="lg:col-span-4 space-y-6">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <h3 className="font-bold text-slate-900 text-base flex items-center gap-2 mb-4">
+                  <Send className="w-4 h-4 text-blue-600" /> API Handshake Dispatcher
+                </h3>
+                <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+                  Trigger custom email payloads to audit template structure, formatting, and delivery status instantly.
+                </p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
+                      Recipient Email
+                    </label>
+                    <input
+                      type="email"
+                      value={testEmailInput}
+                      onChange={(e) => setTestEmailInput(e.target.value)}
+                      placeholder="e.g. buyer@domain.com"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
+                      Template Preset
+                    </label>
+                    <select
+                      value={testEmailType}
+                      onChange={(e: any) => setTestEmailType(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-semibold bg-white"
+                    >
+                      <option value="general_handshake">API Verification Handshake Preset</option>
+                      <option value="welcome-buyer">Welcome Email (Buyer)</option>
+                      <option value="welcome-vendor">Welcome Email (Vendor)</option>
+                      <option value="new-enquiry">New Sourcing Enquiry (BANT Alert)</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleSendTestEmail}
+                    disabled={isTestSending}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                  >
+                    {isTestSending ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Processing Handshake...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Send Test Email
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: History Log */}
+            <div className="lg:col-span-8">
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 text-base">
+                    Outbound Telemetry History ({resendLogs.length})
+                  </h3>
+                  <span className="text-xs text-slate-400 font-medium">Last 100 dispatches</span>
+                </div>
+
+                <div className="overflow-x-auto font-sans">
+                  {isLogsLoading ? (
+                    <div className="p-12 text-center text-slate-500">
+                      <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-600 mb-3" />
+                      <p className="text-sm font-medium">Retrieving latest Resend logs...</p>
+                    </div>
+                  ) : resendLogs.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center mx-auto text-slate-400 mb-4">
+                        <Mail className="w-6 h-6" />
+                      </div>
+                      <h4 className="font-bold text-slate-800 text-sm">No emails sent yet</h4>
+                      <p className="text-slate-500 text-xs mt-1 max-w-sm mx-auto leading-relaxed">
+                        Trigger signups or post a requirement from the homepage to generate automated SMTP logs, or use the Handshake tool to send a test email.
+                      </p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-wider border-b border-slate-100">
+                          <th className="p-4">Recipient</th>
+                          <th className="p-4">Subject</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4">Timestamp</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {resendLogs.map((log: any) => {
+                          let badgeStyle = "bg-slate-50 text-slate-600 border-slate-200";
+                          let label = "Simulated";
+                          
+                          if (log.status === "Success") {
+                            badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                            label = "Sent via Resend";
+                          } else if (log.status?.includes("Sandbox")) {
+                            badgeStyle = "bg-amber-50 text-amber-700 border-amber-100";
+                            label = "Sandbox Bypass";
+                          } else if (log.status?.includes("Simulation")) {
+                            badgeStyle = "bg-indigo-50 text-indigo-700 border-indigo-100";
+                            label = "Simulated Mode";
+                          } else if (log.status === "Failed") {
+                            badgeStyle = "bg-rose-50 text-rose-700 border-rose-100";
+                            label = "Failed";
+                          }
+
+                          return (
+                            <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                              <td className="p-4 font-semibold text-slate-800 text-xs">
+                                {log.recipient}
+                              </td>
+                              <td className="p-4 text-xs text-slate-600 max-w-[200px] truncate">
+                                {log.subject}
+                              </td>
+                              <td className="p-4">
+                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeStyle}`}>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                  {label}
+                                </span>
+                              </td>
+                              <td className="p-4 text-slate-500 text-[11px] font-mono">
+                                {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              </td>
+                              <td className="p-4 text-right space-x-1">
+                                <button
+                                  onClick={() => {
+                                    setPreviewHtml(log.htmlContent);
+                                    setIsPreviewOpen(true);
+                                  }}
+                                  className="text-slate-600 hover:text-slate-950 p-1.5 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer inline border-0 bg-transparent"
+                                  title="View Formatted Email Layout"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleRetryEmail(log)}
+                                  className="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer inline border-0 bg-transparent"
+                                  title="Resend this email"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* HTML Preview Overlay Modal */}
+          {isPreviewOpen && previewHtml && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col h-[80vh]">
+                <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-blue-400" />
+                    <span className="font-bold text-sm">Transactional HTML Layout Preview</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsPreviewOpen(false);
+                      setPreviewHtml(null);
+                    }}
+                    className="text-slate-400 hover:text-white focus:outline-none cursor-pointer p-1 rounded-lg border-0 bg-transparent text-lg font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex-1 bg-slate-100 p-4 relative overflow-hidden">
+                  <iframe
+                    title="Email Template Preview"
+                    srcDoc={previewHtml}
+                    className="w-full h-full bg-white border border-slate-200 rounded-xl"
+                    style={{ border: 'none' }}
+                    sandbox="allow-same-origin allow-scripts"
+                  />
+                </div>
+                <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+                  <span className="text-[11px] text-slate-500 font-medium">Pre-rendered with Responsive Inline Styles</span>
+                  <button
+                    onClick={() => {
+                      setIsPreviewOpen(false);
+                      setPreviewHtml(null);
+                    }}
+                    className="px-4 py-1.5 bg-slate-800 text-white rounded-xl text-xs font-semibold hover:bg-slate-700 transition-colors cursor-pointer"
+                  >
+                    Close Preview
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
