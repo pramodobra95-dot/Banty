@@ -1,0 +1,1034 @@
+{
+  "categories": [
+    {
+      "id": "cat-crm",
+      "name": "CRM Software",
+      "icon": "Users",
+      "description": "Manage customer relationships, sales pipelines, and support tickets in one centralized hub.",
+      "productsCount": 3
+    },
+    {
+      "id": "cat-erp",
+      "name": "ERP Software",
+      "icon": "Layers",
+      "description": "Streamline operations, inventory, finance, and supply chain for mid to large enterprises.",
+      "productsCount": 2
+    },
+    {
+      "id": "cat-accounting",
+      "name": "Accounting Software",
+      "icon": "Calculator",
+      "description": "Automate invoicing, expense tracking, tax preparation, and financial reporting.",
+      "productsCount": 2
+    },
+    {
+      "id": "cat-whatsapp-api",
+      "name": "WhatsApp Business API",
+      "icon": "MessageSquare",
+      "description": "Direct chat capabilities, customer service automation, and broadcast campaigns.",
+      "productsCount": 2
+    },
+    {
+      "id": "cat-telephony",
+      "name": "Cloud Telephony",
+      "icon": "PhoneCall",
+      "description": "Virtual phone systems, call routing, SMS integrations, and analytics for teams.",
+      "productsCount": 2
+    },
+    {
+      "id": "cat-contact-center",
+      "name": "Contact Center",
+      "icon": "Headphones",
+      "description": "Omnichannel customer interaction suite supporting voice, chat, email, and social.",
+      "productsCount": 1
+    },
+    {
+      "id": "cat-m365",
+      "name": "Microsoft 365",
+      "icon": "FileText",
+      "description": "Collaboration suite with Outlook, Teams, Word, Excel, and secure cloud storage.",
+      "productsCount": 1
+    },
+    {
+      "id": "cat-gworkspace",
+      "name": "Google Workspace",
+      "icon": "Mail",
+      "description": "Gmail, Google Drive, Docs, Sheets, and Meet optimized for modern businesses.",
+      "productsCount": 1
+    },
+    {
+      "id": "cat-aws",
+      "name": "AWS Services",
+      "icon": "Cloud",
+      "description": "Amazon Web Services cloud hosting, compute power, databases, and serverless architectures.",
+      "productsCount": 1
+    },
+    {
+      "id": "cat-azure",
+      "name": "Azure Services",
+      "icon": "Server",
+      "description": "Microsoft Azure cloud services, virtual machines, and Active Directory integration.",
+      "productsCount": 1
+    },
+    {
+      "id": "cat-security",
+      "name": "Cyber Security",
+      "icon": "ShieldAlert",
+      "description": "Endpoint protection, firewalls, threat detection, and digital identity management.",
+      "productsCount": 2
+    },
+    {
+      "id": "cat-ai",
+      "name": "AI Solutions",
+      "icon": "Brain",
+      "description": "Custom LLMs, customer support bots, data analytics, and automation algorithms.",
+      "productsCount": 1
+    }
+  ],
+  "vendors": [
+    {
+      "id": "ven-1",
+      "companyName": "SaaSify Solutions Pvt Ltd",
+      "name": "Rajesh Kumar",
+      "logo": "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "gstNumber": "27AAAAA1111A1Z1",
+      "panNumber": "AAAAA1111A",
+      "website": "https://saasify.co.in",
+      "businessCategory": "CRM & ERP Software",
+      "productsOffered": [
+        "cat-crm",
+        "cat-erp",
+        "cat-accounting"
+      ],
+      "rating": 4.8,
+      "location": "Mumbai, Maharashtra",
+      "approved": true,
+      "docVerified": true,
+      "plan": "Gold",
+      "productsCount": 3,
+      "leadsCount": 14,
+      "revenue": 450000,
+      "viewsCount": 1250,
+      "createdAt": "2026-06-08T15:05:02.387Z"
+    },
+    {
+      "id": "ven-2",
+      "companyName": "CloudConnect Telecom",
+      "name": "Vikram Mehta",
+      "logo": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "gstNumber": "24BBBBB2222B2Z2",
+      "panNumber": "BBBBB2222B",
+      "website": "https://cloudconnect.net",
+      "businessCategory": "Cloud Telephony & Contact Center",
+      "productsOffered": [
+        "cat-telephony",
+        "cat-contact-center",
+        "cat-whatsapp-api"
+      ],
+      "rating": 4.6,
+      "location": "Bengaluru, Karnataka",
+      "approved": true,
+      "docVerified": true,
+      "plan": "Silver",
+      "productsCount": 2,
+      "leadsCount": 9,
+      "revenue": 210000,
+      "viewsCount": 890,
+      "createdAt": "2026-06-13T15:05:02.388Z"
+    },
+    {
+      "id": "ven-3",
+      "companyName": "Enterprise Systems India",
+      "name": "Amit Patel",
+      "logo": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "gstNumber": "29CCCCC3333C3Z3",
+      "panNumber": "CCCCC3333C",
+      "website": "https://entsystems.com",
+      "businessCategory": "ERP & Accounting",
+      "productsOffered": [
+        "cat-erp",
+        "cat-accounting"
+      ],
+      "rating": 4.5,
+      "location": "Delhi NCR",
+      "approved": true,
+      "docVerified": true,
+      "plan": "Gold",
+      "productsCount": 2,
+      "leadsCount": 18,
+      "revenue": 580000,
+      "viewsCount": 1620,
+      "createdAt": "2026-05-29T15:05:02.388Z"
+    },
+    {
+      "id": "ven-4",
+      "companyName": "CyberShield IT Labs",
+      "name": "Neha Sharma",
+      "logo": "https://images.unsplash.com/photo-1551434678-e076c223a692?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "gstNumber": "07DDDDD4444D4Z4",
+      "panNumber": "DDDDD4444D",
+      "website": "https://cybershieldlabs.com",
+      "businessCategory": "Cyber Security & Cloud Hosting",
+      "productsOffered": [
+        "cat-security",
+        "cat-aws",
+        "cat-azure"
+      ],
+      "rating": 4.9,
+      "location": "Pune, Maharashtra",
+      "approved": true,
+      "docVerified": true,
+      "plan": "Enterprise",
+      "productsCount": 3,
+      "leadsCount": 22,
+      "revenue": 940000,
+      "viewsCount": 2100,
+      "createdAt": "2026-06-23T15:05:02.388Z"
+    },
+    {
+      "id": "ven-pending",
+      "companyName": "Aesthetic Business Software",
+      "name": "Suresh Raina",
+      "logo": "https://images.unsplash.com/photo-1542744094-3a31f103e35f?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "gstNumber": "27EEEEE5555E5Z5",
+      "panNumber": "EEEEE5555E",
+      "website": "https://aestheticbiz.com",
+      "businessCategory": "AI Solutions",
+      "productsOffered": [
+        "cat-ai"
+      ],
+      "rating": 3.5,
+      "location": "Chennai, Tamil Nadu",
+      "approved": false,
+      "docVerified": false,
+      "plan": "Free",
+      "productsCount": 1,
+      "leadsCount": 0,
+      "revenue": 0,
+      "viewsCount": 120,
+      "createdAt": "2026-07-08T15:05:02.388Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod-1",
+      "name": "Salesforce CRM Cloud Customizer",
+      "description": "Highly customized Salesforce CRM solution tailored for SME sales, service, and marketing automation. Gain a 360-degree view of customers, predict lead scoring with integrated AI analytics, and construct visual pipeline dashboards easily.",
+      "images": [
+        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop&q=60",
+        "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹1,500 / user / month onwards",
+      "features": [
+        "Custom Pipeline Automation",
+        "Advanced Lead and Contact Management",
+        "Mobile App with Offline Mode",
+        "Email and WhatsApp Integration Modules",
+        "Real-time Analytics Dashboard"
+      ],
+      "rating": 4.8,
+      "category": "CRM Software",
+      "vendorId": "ven-1",
+      "vendorName": "SaaSify Solutions Pvt Ltd",
+      "isFeatured": true,
+      "approved": true,
+      "views": 340,
+      "brochureUrl": "#",
+      "videoUrl": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "faqs": [
+        {
+          "question": "Is there a minimum user requirement?",
+          "answer": "Yes, our packages generally start from 5 users upwards."
+        },
+        {
+          "question": "Do you offer integration assistance?",
+          "answer": "We provide full implementation support and custom REST API integrations."
+        }
+      ],
+      "createdAt": "2026-06-10T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-2",
+      "name": "Zoho CRM Plus Implementation",
+      "description": "A comprehensive customer experience platform. Seamlessly connect your sales, marketing, and customer support activities with customizable workflows, multi-channel support, and artificial intelligence helper 'Zia'.",
+      "images": [
+        "https://images.unsplash.com/photo-1551434678-e076c223a692?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹950 / user / month",
+      "features": [
+        "Omnichannel support (Email, Phone, Chat, Social)",
+        "Zia AI Assistant for Sales Prediction",
+        "Interactive Blueprint Builder for processes",
+        "Multi-currency support and localized GST",
+        "Comprehensive reports builder"
+      ],
+      "rating": 4.6,
+      "category": "CRM Software",
+      "vendorId": "ven-1",
+      "vendorName": "SaaSify Solutions Pvt Ltd",
+      "isFeatured": true,
+      "approved": true,
+      "views": 280,
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [
+        {
+          "question": "Can we migrate data from spreadsheets?",
+          "answer": "Absolutely. We provide import templates and verify integrity during upload."
+        }
+      ],
+      "createdAt": "2026-06-12T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-3",
+      "name": "Odoo ERP Enterprise Suite",
+      "description": "A suite of business applications covering all your company needs: CRM, eCommerce, Accounting, Inventory, Point of Sale, Project Management, and manufacturing in a unified secure ecosystem.",
+      "images": [
+        "https://images.unsplash.com/photo-1507206130007-be9de7134247?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹1,200 / user / month (all apps included)",
+      "features": [
+        "Fully integrated inventory & warehousing",
+        "Comprehensive HR management and attendance",
+        "Double-entry bookkeeping and accounting sync",
+        "Custom studio for codeless modifications",
+        "Multi-company consolidated accounts"
+      ],
+      "rating": 4.5,
+      "category": "ERP Software",
+      "vendorId": "ven-3",
+      "vendorName": "Enterprise Systems India",
+      "isFeatured": true,
+      "approved": true,
+      "views": 450,
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [
+        {
+          "question": "Can Odoo run on our local server?",
+          "answer": "Yes, Odoo supports both cloud hosting (Odoo.sh / AWS) and on-premise deployments."
+        }
+      ],
+      "createdAt": "2026-06-03T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-4",
+      "name": "SAP Business One SME Edition",
+      "description": "Affordable ERP designed specifically for growing businesses. SAP Business One integrates your entire business operations from financials, purchasing, stock, sales, and manufacturing, backed by SAP's world-class database performance.",
+      "images": [
+        "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹45,000 / year / license",
+      "features": [
+        "Real-time Inventory tracking & valuation",
+        "MRP (Material Requirements Planning) engine",
+        "In-depth BI dashboards with SAP HANA engine",
+        "GST compliance & electronic invoice generation",
+        "Automated procurement control"
+      ],
+      "rating": 4.7,
+      "category": "ERP Software",
+      "vendorId": "ven-3",
+      "vendorName": "Enterprise Systems India",
+      "isFeatured": true,
+      "approved": true,
+      "views": 520,
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [
+        {
+          "question": "Is SAP Business One suitable for a trading company?",
+          "answer": "It is extremely popular in trading, wholesale distribution, and discrete manufacturing."
+        }
+      ],
+      "createdAt": "2026-05-31T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-5",
+      "name": "CloudConnect Virtual PBX System",
+      "description": "State-of-the-art cloud telephony for remote and hybrid teams. Keep your business running with an interactive voice response (IVR) menu, virtual mobile numbers, call recording, and seamless browser-based dialer.",
+      "images": [
+        "https://images.unsplash.com/photo-1557200134-90327ee9fafa?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹1,999 / channel / month",
+      "features": [
+        "Multi-level Interactive Voice Response (IVR)",
+        "High quality call recording & log archiving",
+        "Real-time call center performance dashboards",
+        "CRM integrations with API triggers",
+        "Mobile softphone app (iOS and Android)"
+      ],
+      "rating": 4.4,
+      "category": "Cloud Telephony",
+      "vendorId": "ven-2",
+      "vendorName": "CloudConnect Telecom",
+      "isFeatured": false,
+      "approved": true,
+      "views": 195,
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [
+        {
+          "question": "Do we need physical handsets?",
+          "answer": "No, you can receive/make calls entirely on your laptop or smartphone softphone apps."
+        }
+      ],
+      "createdAt": "2026-06-18T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-6",
+      "name": "Tally Prime ERP Implementation",
+      "description": "The ultimate accounting, inventory, banking and payroll software trusted by millions of enterprises. Get immediate compliance reporting, GST filing, audit logs, and simplified ledger setups.",
+      "images": [
+        "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹18,000 one-time (Silver) / ₹54,000 one-time (Gold)",
+      "features": [
+        "E-Invoicing and E-Way Bill instant creation",
+        "Consolidated Balance Sheets & P&L statements",
+        "Comprehensive multi-currency cashflows",
+        "Multi-user concurrent network licenses",
+        "Secure remote access features"
+      ],
+      "rating": 4.8,
+      "category": "Accounting Software",
+      "vendorId": "ven-1",
+      "vendorName": "SaaSify Solutions Pvt Ltd",
+      "isFeatured": true,
+      "approved": true,
+      "views": 610,
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [
+        {
+          "question": "Can multiple users access the same data?",
+          "answer": "Yes, the Tally Prime Gold multi-user edition supports parallel network access."
+        }
+      ],
+      "createdAt": "2026-06-28T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-7",
+      "name": "CrowdStrike Threat Hunter Suite",
+      "description": "Modern cloud-native next-generation endpoint security. Protect your enterprise machines from malware, ransomware, and zero-day exploits using machine learning behavioral threat analysis and live telemetry.",
+      "images": [
+        "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹3,200 / endpoint / year onwards",
+      "features": [
+        "Single-agent architecture (zero lag on endpoint)",
+        "24/7 Managed Detection and Response (MDR)",
+        "Instant quarantine & attack chain maps",
+        "Threat intelligence and search capabilities",
+        "Ransomware prevention and automated rollback"
+      ],
+      "rating": 4.9,
+      "category": "Cyber Security",
+      "vendorId": "ven-4",
+      "vendorName": "CyberShield IT Labs",
+      "isFeatured": true,
+      "approved": true,
+      "views": 400,
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [
+        {
+          "question": "Is this heavy on laptop batteries?",
+          "answer": "CrowdStrike runs a tiny lightweight micro-sensor in kernel-space, consuming less than 1% CPU."
+        }
+      ],
+      "createdAt": "2026-06-26T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-pending",
+      "name": "SmartBiz AI Agent Hub",
+      "description": "Advanced AI conversational platform to handle inbound support calls, automate email replies, and qualify leads synchronously.",
+      "images": [
+        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹15,000 / month",
+      "features": [
+        "Multi-agent workflow orchestrator",
+        "Prebuilt CRM connectors",
+        "Natural-sounding speech synthesis"
+      ],
+      "rating": 3.5,
+      "category": "AI Solutions",
+      "vendorId": "ven-pending",
+      "vendorName": "Aesthetic Business Software",
+      "isFeatured": false,
+      "approved": false,
+      "views": 120,
+      "brochureUrl": "",
+      "videoUrl": "",
+      "faqs": [],
+      "createdAt": "2026-07-08T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-8",
+      "name": "Airtel Enterprise SIP Trunking",
+      "description": "Premium high-density voice connectivity solution for modern enterprises. Scalable digital SIP trunking with up to 1500 concurrent channels, customized geographical DID routing, localized failover protection, and extreme reliability.",
+      "images": [
+        "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹15,000 / month (100 concurrent channels)",
+      "features": [
+        "Up to 1500 concurrent sessions on a single link",
+        "G.711 / G.729 High-Definition crystal voice quality",
+        "Robust geographic redundancy & auto failover",
+        "Direct integration with Asterisk, Avaya, and Cisco PBX",
+        "Real-time SLA reporting dashboard"
+      ],
+      "rating": 4.8,
+      "category": "Cloud Telephony",
+      "vendorId": "ven-2",
+      "vendorName": "CloudConnect Telecom",
+      "isFeatured": true,
+      "approved": true,
+      "views": 310,
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [
+        {
+          "question": "What is the physical installation requirement?",
+          "answer": "SIP trunks are delivered completely over our secure virtual fiber or dedicated internet link, requiring zero physical hardware on your site."
+        }
+      ],
+      "createdAt": "2026-07-03T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-9",
+      "name": "Tata Tele Business Smartflo Suite",
+      "description": "Ultra-scalable cloud telephony, call center management, and virtual receptionist system. Features central portal tracking for complete outbound and inbound customer communication, automatic multi-agent routing, and dynamic phone extensions.",
+      "images": [
+        "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹1,800 / user / month",
+      "features": [
+        "Visual IVR and drag-drop call-flow designer",
+        "Automated outbound predictive dialer",
+        "Inbound smart-routing with agent priority logs",
+        "Click-to-Call browser plugins & Salesforce CRM sync",
+        "100% cloud-hosted with 99.9% uptime SLA"
+      ],
+      "rating": 4.6,
+      "category": "Cloud Telephony",
+      "vendorId": "ven-2",
+      "vendorName": "CloudConnect Telecom",
+      "isFeatured": true,
+      "approved": true,
+      "views": 245,
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [
+        {
+          "question": "Can we use custom music on hold?",
+          "answer": "Yes, you can upload WAV or MP3 audio snippets to welcome your customers or play promotional news."
+        }
+      ],
+      "createdAt": "2026-07-04T15:05:02.388Z",
+      "showSimilar": true
+    },
+    {
+      "id": "prod-10",
+      "name": "Exotel Omnichannel Contact Center",
+      "description": "A complete unified customer response platform supporting high-volume voice campaigns, WhatsApp Business API triggers, localized SMS broadcasts, and web chat. Perfect for customer support, delivery notifications, and verified OTP generation.",
+      "images": [
+        "https://images.unsplash.com/photo-1534536281715-e28d76689b4d?w=500&auto=format&fit=crop&q=60"
+      ],
+      "pricing": "₹3,500 / seat / month (unlimited incoming calls)",
+      "features": [
+        "Unified customer timeline for phone, chat & WhatsApp",
+        "Automated lead verification and OTP trigger APIs",
+        "Real-time voice speech-to-text transcription",
+        "Custom reporting with multi-dimensional BI dashboards",
+        "Zero setup fee with immediate cloud activation"
+      ],
+      "rating": 4.7,
+      "category": "Contact Center",
+      "vendorId": "ven-2",
+      "vendorName": "CloudConnect Telecom",
+      "isFeatured": true,
+      "approved": true,
+      "views": 420,
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [
+        {
+          "question": "Is WhatsApp API integrated directly?",
+          "answer": "Yes, you can configure template-based automated notification messages on customer signup or order dispatch."
+        }
+      ],
+      "createdAt": "2026-07-06T15:05:02.388Z",
+      "showSimilar": true
+    }
+  ],
+  "leads": [
+    {
+      "id": "lead-1",
+      "title": "Requires Omnichannel CRM with WhatsApp API integration",
+      "category": "CRM Software",
+      "description": "We are an edtech company with 45 sales executives. We need a CRM that records lead source from Meta ads, triggers auto-WhatsApp followups, assigns leads in round-robin format, and logs telephone recordings. Must offer dashboard to review response speeds.",
+      "budget": "₹50,000 - ₹80,000 per month",
+      "companyName": "Zenith EduTech solutions",
+      "contactName": "Siddharth Sen",
+      "mobile": "+91 98765 43210",
+      "email": "siddharth@zenithedu.com",
+      "city": "Delhi",
+      "timeline": "Within 15 Days",
+      "status": "Assigned",
+      "bant": {
+        "budget": "Sufficient - ₹60k to ₹100k approved budget",
+        "authority": "Decision maker - Head of Operations & Sales",
+        "need": "High - Facing 40% lead leakage in manual workflows",
+        "timeline": "Immediate - Needs deployment before July cohort starts"
+      },
+      "assignedVendors": [
+        "ven-1",
+        "ven-2"
+      ],
+      "createdAt": "2026-07-04T15:05:02.388Z"
+    },
+    {
+      "id": "lead-2",
+      "title": "Cloud Telephony Setup & SIP Trunking for Call Center",
+      "category": "Cloud Telephony",
+      "description": "Looking for an enterprise grade cloud telephony provider to setup an outbound call center with 25 agents. Need high call connectivity ratios, DID numbers in Maharashtra, and softphone integration for laptop users.",
+      "budget": "₹25,000 - ₹40,000 per month",
+      "companyName": "CareSource Health Systems",
+      "contactName": "Dr. Ananya Roy",
+      "mobile": "+91 87654 32109",
+      "email": "ananya.roy@caresource.in",
+      "city": "Mumbai",
+      "timeline": "1 Month",
+      "status": "Submitted",
+      "bant": {
+        "budget": "Approved budget up to ₹40k/mo",
+        "authority": "Evaluating committee of IT Director & Admin Manager",
+        "need": "Critical for managing incoming patients patient desk support",
+        "timeline": "Target launch by middle of next month"
+      },
+      "assignedVendors": [],
+      "createdAt": "2026-07-06T15:05:02.388Z"
+    },
+    {
+      "id": "lead-3",
+      "title": "ERP & Accounting Migration from Manual Tally",
+      "category": "ERP Software",
+      "description": "We run a manufacturing factory of automotive components. Need to move from offline custom databases and manual ledgers to Odoo or SAP. Need Inventory Management, Bills of Materials, Invoicing, Purchase Orders and GST compliance.",
+      "budget": "₹2,000,000 - ₹5,000,000 (one-time setup)",
+      "companyName": "Autoforge Components Pvt Ltd",
+      "contactName": "Ganesh Hegde",
+      "mobile": "+91 76543 21098",
+      "email": "g.hegde@autoforge.com",
+      "city": "Pune",
+      "timeline": "2-3 Months",
+      "status": "Proposal Received",
+      "bant": {
+        "budget": "Board approved one-time capital up to ₹40L",
+        "authority": "Managing Director and CFO are the final approvers",
+        "need": "Inventory leakages and audit remarks are forcing digital ERP",
+        "timeline": "Target implementation complete within 90 days"
+      },
+      "assignedVendors": [
+        "ven-3"
+      ],
+      "createdAt": "2026-07-01T15:05:02.388Z"
+    }
+  ],
+  "blogs": [
+    {
+      "id": "blog-1",
+      "title": "How to Choose the Right CRM Software for Your Growing SME",
+      "content": "Selecting the correct CRM is critical. Many companies overpay for heavy software like Salesforce before their teams are ready. Alternatively, they select cheap applications that do not scale. Learn the step-by-step framework including BANT score qualifications to evaluate solutions.\n\n### 1. Understand Your Needs\nBefore comparing, map out your customer journey. Do you need marketing auto-responders or simple sales pipelining?\n\n### 2. Verify Mobile Capabilities\nYour field agents require direct visual pipeline tracking, click-to-call, and local GST logging on-the-go.\n\n### 3. API Integrations\nEnsure your selected CRM seamlessly connects with Google Workspace, WhatsApp API, and cloud telephony channels.",
+      "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=60",
+      "category": "CRM & Sales",
+      "tags": [
+        "CRM",
+        "SME Growth",
+        "Software Guide"
+      ],
+      "author": "Prasanna Nair (IT Analyst)",
+      "readTime": "5 mins read",
+      "slug": "how-to-choose-crm",
+      "likes": 0,
+      "createdAt": "2026-07-03T15:05:02.388Z",
+      "metaTitle": "How to Choose the Right CRM Software for SME - BANTConfirm",
+      "metaDescription": "Read the expert B2B software sourcing guide by Prasanna Nair on choosing scalable CRM applications. Optimize your sales pipeline using BANT framework metrics.",
+      "metaKeywords": "CRM software, SME sales pipeline, BANT framework, software selection",
+      "focusKeyword": "CRM software",
+      "schemaMarkup": "{\"@context\":\"https://schema.org\",\"@type\":\"BlogPosting\",\"headline\":\"How to Choose the Right CRM Software for Your Growing SME\",\"author\":{\"@type\":\"Person\",\"name\":\"Prasanna Nair\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"BANTConfirm\"}}"
+    },
+    {
+      "id": "blog-2",
+      "title": "Understanding BANT Leads: The Enterprise Sales Shortcut",
+      "content": "BANT stands for Budget, Authority, Need, and Timeline. In modern enterprise procurement, standard contact forms lead to massive sales noise. By qualifying buyers on all 4 components beforehand, platform leads ensure 3x higher conversion ratios.\n\n### Why Budget Matters\nKnowing if the customer has an allocated budget saves countless demonstration hours. If their expectation is 5x lower than the entry licensing, qualification suggests an immediate alternative.\n\n### Tracking Authority & Timeline\nAlways confirm if you are discussing with the direct system owner, IT decision maker, or external consultants, and target delivery timelines strictly.",
+      "image": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&auto=format&fit=crop&q=60",
+      "category": "B2B Strategy",
+      "tags": [
+        "BANT",
+        "Sales Pipeline",
+        "Lead Generation"
+      ],
+      "author": "Rohan Das (Founder, BANTConfirm)",
+      "readTime": "4 mins read",
+      "slug": "understanding-bant-leads",
+      "likes": 0,
+      "createdAt": "2026-07-05T15:05:02.388Z",
+      "metaTitle": "Understanding BANT Leads: Enterprise Sales Shortcut - BANTConfirm",
+      "metaDescription": "Master the BANT qualification framework for Enterprise B2B SaaS. Learn how pre-qualifying leads on Budget, Authority, Need, and Timeline increases conversions by 3x.",
+      "metaKeywords": "BANT leads, B2B sales pipeline, enterprise SaaS procurement",
+      "focusKeyword": "BANT Leads",
+      "schemaMarkup": "{\"@context\":\"https://schema.org\",\"@type\":\"BlogPosting\",\"headline\":\"Understanding BANT Leads: The Enterprise Sales Shortcut\",\"author\":{\"@type\":\"Person\",\"name\":\"Rohan Das\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"BANTConfirm\"}}"
+    }
+  ],
+  "banners": [
+    {
+      "id": "ban-1",
+      "title": "Accelerate Your Sales Pipeline",
+      "subtitle": "Get BANT Qualified Hot Software Leads Delivered Real-time to Your Dashboard",
+      "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&auto=format&fit=crop&q=80",
+      "active": true,
+      "type": "image",
+      "linkUrl": "#vendor-plans"
+    },
+    {
+      "id": "ban-2",
+      "title": "Cloud Migration Made Simple",
+      "subtitle": "Compare AWS, Azure & GCP Solutions Offered by Premium Certified Consultants",
+      "image": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80",
+      "active": true,
+      "type": "image",
+      "linkUrl": "#categories"
+    }
+  ],
+  "testimonials": [
+    {
+      "id": "test-1",
+      "name": "Arun Alagappan",
+      "company": "Metro Retailers",
+      "role": "VP Information Technology",
+      "rating": 5,
+      "feedback": "We needed to procure an ERP solution for our 12 outlets. We posted our BANT requirement on BANTConfirm and within 48 hours, we were put in touch with three gold-verified Odoo implementation partners. Outstanding experience!",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60"
+    },
+    {
+      "id": "test-2",
+      "name": "Meenakshi Iyer",
+      "company": "Zeta Healthcare",
+      "role": "Chief Operating Officer",
+      "rating": 5,
+      "feedback": "The BANT qualification on this platform is a game changer. We received exact technical matches matching our budget constraints without having to filter 100s of cold spam sales calls.",
+      "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
+    },
+    {
+      "id": "test-3",
+      "name": "Karan Malhotra",
+      "company": "Vanguard Logistics",
+      "role": "Sourcing Director",
+      "rating": 5,
+      "feedback": "Procured custom fleet tracking SaaS with automated billing. The BANT verification of budget and timeline kept proposals targeted and saved us 3 months of negotiation.",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60"
+    },
+    {
+      "id": "test-4",
+      "name": "Ananya Sen",
+      "company": "Apex Edutech",
+      "role": "Head of Procurement",
+      "rating": 5,
+      "feedback": "Finding Cloud Telephony with custom IVR was painless. BANTConfirm's matchmaker filtered out low-tier brokers and linked us directly with certified telecom vendors.",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60"
+    },
+    {
+      "id": "test-5",
+      "name": "Vikram Malhotra",
+      "company": "TechNova Solutions",
+      "role": "VP of Infrastructure",
+      "rating": 5,
+      "feedback": "Sourced unified endpoint cybersecurity for 800+ nodes. BANTConfirm confirmed our technical authority layer before introducing partners, ensuring extreme precision.",
+      "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=60"
+    }
+  ],
+  "settings": {
+    "featuredListingPrice": 4999,
+    "leadCreditPrice": 1500,
+    "commissionRate": 5,
+    "stripeEnabled": false,
+    "about": "BANTConfirm is India's leading B2B enterprise software and IT solutions sourcing marketplace.\n\nOur platform connects business buyers with pre-qualified, certified technology vendors. Traditional procurement takes months of endless cold calling, untargeted pitches, and budget mismatches. We solve this by introducing absolute clarity and architectural precision to the B2B tech discovery journey.\n\nWe utilize the globally recognized BANT (Budget, Authority, Need, Timeline) framework to verify every procurement requirement before it is passed to our certified IT partners.\n\n- BUDGET VERIFICATION: We ensure the enterprise buyer has a defined, active budget matching market solutions.\n- AUTHORITY LAYER: We verify that the evaluator or team holds direct decision-making or key advisory roles.\n- NEED DEFINITION: We document the exact technical constraints, user-load requirements, and functional challenges.\n- TIMELINE CONFIRMATION: We confirm active purchase cycles ranging from immediate to a maximum of 90 days.\n\nHeadquartered in Noida, Uttar Pradesh, BANTConfirm serves over 500+ enterprises and connects them with India's most reliable SaaS, ERP, Cloud, Security, and Custom Software developers. We make technology procurement transparent, lightning-fast, and completely hassle-free.",
+    "terms": "Welcome to BANTConfirm Sourcing Marketplace.\n\nThese terms and conditions govern your use of the BANTConfirm platform as a business buyer, certified vendor, or system administrator.\n\n1. SOURCING ACCURACY: Buyers agree to provide accurate, truthful, and authorized procurement details including contact information, active budgets, and deployment timelines.\n\n2. VENDOR ENGAGEMENT: Vendors agree to respond to claimed leads in a timely, professional manner, adhering to industry compliance standards.\n\n3. BANT AUDITING: BANTConfirm reserves the right to audit, modify, or reject any sourcing request that does not meet our high-quality verification standards.",
+    "privacy": "Your corporate and personal privacy is of paramount importance to us.\n\n1. INFORMATION COLLECTION: We collect business-profile details, verified email addresses, mobile numbers, and software procurement requirements strictly to facilitate secure matchmaking.\n\n2. DATA SHARING: Sourcing details are only shared with certified software partners once they successfully purchase or claim the corresponding lead credit under strict confidentiality.\n\n3. COMPLIANCE: Our platform maintains industry-standard security encryption protocols to ensure secure data transfers at all times."
+  },
+  "notifications": [
+    {
+      "id": "not-1",
+      "userId": "buyer-demo",
+      "title": "Requirement Submitted Successfully",
+      "message": "Your requirement for Omnichannel CRM with WhatsApp integration has been received and verified by our BANT auditing team.",
+      "read": false,
+      "createdAt": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "not-2",
+      "userId": "vendor-demo",
+      "title": "New Matching Lead Alert",
+      "message": "A high quality qualified Lead matching 'CRM Software' has been assigned to your panel. Purchase credentials now.",
+      "read": false,
+      "createdAt": "2026-07-08T15:05:02.388Z"
+    }
+  ],
+  "currentUser": {
+    "id": "user-demo",
+    "name": "Prabhu Deva",
+    "email": "pramodobra95@gmail.com",
+    "companyName": "Deva Consulting & Co",
+    "mobile": "+91 94444 12345",
+    "city": "Chennai",
+    "gstNumber": "33ABCDE1234F1Z0",
+    "businessType": "SME Services",
+    "role": "buyer",
+    "createdAt": "2026-07-08T15:05:02.388Z"
+  },
+  "leadAssignments": [
+    {
+      "id": "la-1",
+      "leadId": "lead-1",
+      "vendorId": "ven-1",
+      "status": "Contacted",
+      "purchased": true,
+      "createdAt": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "la-2",
+      "leadId": "lead-1",
+      "vendorId": "ven-2",
+      "status": "New",
+      "purchased": true,
+      "createdAt": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "la-3",
+      "leadId": "lead-3",
+      "vendorId": "ven-3",
+      "status": "Proposal Sent",
+      "purchased": true,
+      "createdAt": "2026-07-08T15:05:02.388Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-demo",
+      "name": "Prabhu Deva",
+      "email": "pramodobra95@gmail.com",
+      "companyName": "Deva Consulting & Co",
+      "mobile": "+91 94444 12345",
+      "city": "Chennai",
+      "role": "buyer",
+      "createdAt": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "user-admin",
+      "name": "Admin Master",
+      "email": "info.bouuz@gmail.com",
+      "companyName": "BANTConfirm HQ",
+      "mobile": "+91 98765 43210",
+      "city": "Mumbai",
+      "role": "admin",
+      "createdAt": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "user-vendor",
+      "name": "Rajesh Kumar",
+      "email": "vendor@bantconfirm.com",
+      "companyName": "SaaSify Solutions Pvt Ltd",
+      "mobile": "+91 91111 22222",
+      "city": "Mumbai",
+      "role": "vendor",
+      "createdAt": "2026-07-08T15:05:02.388Z"
+    }
+  ],
+  "trustedVendors": [
+    {
+      "id": "tv-1",
+      "vendor_name": "Google Cloud",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg",
+      "website_url": "https://cloud.google.com",
+      "display_order": 1,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "tv-2",
+      "vendor_name": "Microsoft Enterprise",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo_%282012%29.svg",
+      "website_url": "https://microsoft.com",
+      "display_order": 2,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "tv-3",
+      "vendor_name": "Amazon Web Services",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg",
+      "website_url": "https://aws.amazon.com",
+      "display_order": 3,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "tv-4",
+      "vendor_name": "Salesforce CRM",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/f/f9/Salesforce.com_logo.svg",
+      "website_url": "https://salesforce.com",
+      "display_order": 4,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "tv-5",
+      "vendor_name": "Zoho Corporation",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/d/df/Zoho_logo.svg",
+      "website_url": "https://zoho.com",
+      "display_order": 5,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "tv-6",
+      "vendor_name": "Odoo ERP",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Odoo-logo.svg",
+      "website_url": "https://odoo.com",
+      "display_order": 6,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "tv-7",
+      "vendor_name": "SAP India",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/5/59/SAP_2011_logo.svg",
+      "website_url": "https://sap.com",
+      "display_order": 7,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "tv-8",
+      "vendor_name": "Twilio Communications",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Twilio-logo-red.svg",
+      "website_url": "https://twilio.com",
+      "display_order": 8,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "tv-9",
+      "vendor_name": "HubSpot",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/3/3f/HubSpot_Logo.svg",
+      "website_url": "https://hubspot.com",
+      "display_order": 9,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "tv-10",
+      "vendor_name": "Tally Solutions",
+      "logo_url": "https://upload.wikimedia.org/wikipedia/commons/0/09/Tally_-_Logo.svg",
+      "website_url": "https://tallysolutions.com",
+      "display_order": 10,
+      "is_active": true,
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    }
+  ],
+  "marketingBanners": [
+    {
+      "id": "mb-1",
+      "title": "Double Your Sales Close Rate with BANT Qualification",
+      "image_url": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80",
+      "button_text": "Post Sourcing Request",
+      "redirect_url": "/post",
+      "display_order": 1,
+      "is_active": true,
+      "start_date": "2026-01-01",
+      "end_date": "2027-12-31",
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "mb-2",
+      "title": "Join BANTConfirm elite network of certified IT Sourcing partners",
+      "image_url": "https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&auto=format&fit=crop&q=80",
+      "button_text": "Become Sourcing Partner",
+      "redirect_url": "/become-partner",
+      "display_order": 2,
+      "is_active": true,
+      "start_date": "2026-01-01",
+      "end_date": "2027-12-31",
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    },
+    {
+      "id": "mb-3",
+      "title": "Explore Premium Certified Enterprise Software Solutions",
+      "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80",
+      "button_text": "Browse Categories",
+      "redirect_url": "/categories",
+      "display_order": 3,
+      "is_active": true,
+      "start_date": "2026-01-01",
+      "end_date": "2027-12-31",
+      "created_at": "2026-07-08T15:05:02.388Z",
+      "updated_at": "2026-07-08T15:05:02.388Z"
+    }
+  ],
+  "resendLogs": [],
+  "reviews": [
+    {
+      "id": "rev-1",
+      "productId": "prod-1",
+      "vendorId": "ven-1",
+      "userName": "Ramesh Sharma",
+      "rating": 5,
+      "comment": "Excellent enterprise integration. The automated RFQ modules saved us 40+ hours in vendor matching.",
+      "createdAt": "2026-07-04T15:09:11.819Z",
+      "type": "product"
+    },
+    {
+      "id": "rev-2",
+      "productId": "prod-2",
+      "vendorId": "ven-1",
+      "userName": "Ananya Iyer",
+      "rating": 4,
+      "comment": "Outstanding client response times. The platform features match our compliance needs perfectly.",
+      "createdAt": "2026-06-28T15:09:11.819Z",
+      "type": "product"
+    },
+    {
+      "id": "rev-3",
+      "productId": "",
+      "vendorId": "ven-1",
+      "userName": "Vikram Malhotra",
+      "rating": 5,
+      "comment": "Vendor has excellent SLA compliance and certified BANT qualification parameters. Highly recommended for premium procurement.",
+      "createdAt": "2026-06-23T15:09:11.819Z",
+      "type": "vendor"
+    }
+  ]
+}
