@@ -6,5 +6,10 @@
     { "source": "/sitemap.xml", "destination": "/api/index.ts" },
     { "source": "/robots.txt", "destination": "/api/index.ts" },
     { "source": "/((?!api|assets|favicon.png)[^.]*)", "destination": "/api/index.ts" }
-  ]
+  ],
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "dist/**"
+    }
+  }
 }

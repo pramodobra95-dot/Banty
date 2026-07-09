@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import compression from "compression";
-import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import pg from "pg";
@@ -5366,6 +5365,35 @@ function getSEOPageHtml(reqPath: string, baseHtml: string) {
   return html;
 }
 
+function resolveIndexHtml(): string {
+  if (process.env.NODE_ENV !== "production") {
+    return path.join(process.cwd(), "index.html");
+  }
+  const paths = [
+    path.join(process.cwd(), "dist", "index.html"),
+    path.join(process.cwd(), "..", "dist", "index.html"),
+    path.join(__dirname, "dist", "index.html"),
+    path.join(__dirname, "..", "dist", "index.html")
+  ];
+  for (const p of paths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return path.join(process.cwd(), "dist", "index.html"); // fallback
+}
+
+function resolveDistPath(): string {
+  const paths = [
+    path.join(process.cwd(), "dist"),
+    path.join(process.cwd(), "..", "dist"),
+    path.join(__dirname, "dist"),
+    path.join(__dirname, "..", "dist")
+  ];
+  for (const p of paths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return path.join(process.cwd(), "dist"); // fallback
+}
+
 async function startServer() {
   // Serve dynamic Sitemap
   app.get("/sitemap.xml", (req, res) => {
@@ -5507,13 +5535,7 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
   seoPaths.forEach(seoPath => {
     app.get(seoPath, async (req, res, next) => {
       try {
-        let templatePath = "";
-        if (process.env.NODE_ENV !== "production") {
-          templatePath = path.join(process.cwd(), "index.html");
-        } else {
-          templatePath = path.join(process.cwd(), "dist", "index.html");
-        }
-        
+        const templatePath = resolveIndexHtml();
         let baseHtml = fs.readFileSync(templatePath, "utf-8");
         const renderedHtml = getSEOPageHtml(req.path, baseHtml);
         res.header("Content-Type", "text/html");
@@ -5526,13 +5548,14 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
   });
 
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = resolveDistPath();
     // Serve static files with 1 year max-age, immutable for hashed assets
     app.use(express.static(distPath, {
       maxAge: '31536000s', // 1 year
@@ -5548,13 +5571,17 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
     }));
     app.get("*", (req, res) => {
       try {
-        let templatePath = path.join(distPath, "index.html");
+        const templatePath = resolveIndexHtml();
         let baseHtml = fs.readFileSync(templatePath, "utf-8");
         const renderedHtml = getSEOPageHtml(req.path, baseHtml);
         res.header("Content-Type", "text/html");
         res.send(renderedHtml);
       } catch (err) {
-        res.sendFile(path.join(distPath, "index.html"));
+        try {
+          res.sendFile(resolveIndexHtml());
+        } catch (sendErr) {
+          res.status(500).send("Static build output file index.html is missing. Please build the project.");
+        }
       }
     });
   }
