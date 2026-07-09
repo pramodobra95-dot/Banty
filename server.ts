@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import compression from "compression";
+import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import pg from "pg";
@@ -11,7 +12,7 @@ dotenv.config();
 
 const app = express();
 app.use(compression());
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 
 // Enable JSON bodies
 app.use(express.json());
@@ -5525,7 +5526,6 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
   });
 
   if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

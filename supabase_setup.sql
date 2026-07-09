@@ -148,6 +148,19 @@ CREATE TABLE public.marketing_banners (
 );
 
 -- ==========================================
+-- 6c. TABLE: trusted_vendors
+-- ==========================================
+CREATE TABLE public.trusted_vendors (
+  id TEXT PRIMARY KEY,
+  vendor_name TEXT NOT NULL,
+  logo_url TEXT NOT NULL,
+  website_url TEXT,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ==========================================
 -- 7. TABLE: testimonials
 -- ==========================================
 CREATE TABLE public.testimonials (
@@ -211,6 +224,7 @@ ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trusted_vendors ENABLE ROW LEVEL SECURITY;
 
 -- 1. Create Public Read Policies for all tables
 CREATE POLICY "Allow public read access on categories" ON public.categories FOR SELECT USING (true);
@@ -223,6 +237,7 @@ CREATE POLICY "Allow public read access on testimonials" ON public.testimonials 
 CREATE POLICY "Allow public read access on settings" ON public.settings FOR SELECT USING (true);
 CREATE POLICY "Allow public read access on notifications" ON public.notifications FOR SELECT USING (true);
 CREATE POLICY "Allow public read access on profiles" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Allow public read access on trusted_vendors" ON public.trusted_vendors FOR SELECT USING (true);
 
 -- 2. Create Write Policies for public insertions and edits (Client-Side actions)
 CREATE POLICY "Allow anyone to insert leads" ON public.leads FOR INSERT WITH CHECK (true);
@@ -240,6 +255,11 @@ CREATE POLICY "Allow anyone to delete categories" ON public.categories FOR DELET
 CREATE POLICY "Allow anyone to insert profiles" ON public.profiles FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow anyone to update profiles" ON public.profiles FOR UPDATE USING (true);
 CREATE POLICY "Allow anyone to delete profiles" ON public.profiles FOR DELETE USING (true);
+CREATE POLICY "Allow anyone to insert trusted_vendors" ON public.trusted_vendors FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anyone to update trusted_vendors" ON public.trusted_vendors FOR UPDATE USING (true);
+CREATE POLICY "Allow anyone to delete trusted_vendors" ON public.trusted_vendors FOR DELETE USING (true);
+
+GRANT ALL ON public.trusted_vendors TO anon, authenticated, service_role;
 
 
 -- ====================================================================

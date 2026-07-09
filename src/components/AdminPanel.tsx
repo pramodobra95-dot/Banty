@@ -464,41 +464,72 @@ export default function AdminPanel({
       return;
     }
 
+    const readAsDataURL = (f: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (typeof e.target?.result === "string") {
+            resolve(e.target.result);
+          } else {
+            reject(new Error("Failed to read file."));
+          }
+        };
+        reader.onerror = () => reject(new Error("File reading error."));
+        reader.readAsDataURL(f);
+      });
+    };
+
     setMbUploading(true);
     try {
-      const fileExt = file.name.split('.').pop() || 'png';
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `banners/${fileName}`;
+      let imageUrlToSet = "";
+      let fellBack = false;
 
       if (isSupabaseConfigured) {
-        let { data, error } = await supabase.storage
-          .from("marketing")
-          .upload(filePath, file, { cacheControl: "3600", upsert: true });
+        try {
+          const fileExt = file.name.split('.').pop() || 'png';
+          const fileName = `${Date.now()}.${fileExt}`;
+          const filePath = `banners/${fileName}`;
 
-        if (error) {
-          const fallbackRes = await supabase.storage
-            .from("public")
+          let { data, error } = await supabase.storage
+            .from("marketing")
             .upload(filePath, file, { cacheControl: "3600", upsert: true });
-          if (fallbackRes.error) {
-            throw new Error(fallbackRes.error.message);
-          }
-          data = fallbackRes.data;
-        }
 
-        if (data) {
-          const { data: { publicUrl } } = supabase.storage
-            .from(data.path.startsWith("marketing") ? "marketing" : "public")
-            .getPublicUrl(filePath);
-          
-          setMbForm(prev => ({ ...prev, image_url: publicUrl }));
+          if (error) {
+            const fallbackRes = await supabase.storage
+              .from("public")
+              .upload(filePath, file, { cacheControl: "3600", upsert: true });
+            if (fallbackRes.error) {
+              throw new Error(fallbackRes.error.message);
+            }
+            data = fallbackRes.data;
+          }
+
+          if (data) {
+            const { data: { publicUrl } } = supabase.storage
+              .from(data.path.startsWith("marketing") ? "marketing" : "public")
+              .getPublicUrl(filePath);
+            imageUrlToSet = publicUrl;
+          } else {
+            throw new Error("No data returned from storage.");
+          }
+        } catch (storageErr) {
+          console.warn("Supabase storage upload failed, falling back to secure Base64:", storageErr);
+          imageUrlToSet = await readAsDataURL(file);
+          fellBack = true;
         }
       } else {
-        const objectUrl = URL.createObjectURL(file);
-        setMbForm(prev => ({ ...prev, image_url: objectUrl }));
+        imageUrlToSet = await readAsDataURL(file);
+      }
+
+      setMbForm(prev => ({ ...prev, image_url: imageUrlToSet }));
+      if (fellBack) {
+        safeAlert("Note: Supabase storage buckets are not fully configured yet. Image has been safely loaded using persistent Base64 encoder!", "info");
+      } else {
+        safeAlert("Image uploaded and processed successfully!", "success");
       }
     } catch (err: any) {
       console.error("Upload error:", err);
-      safeAlert("Failed to upload image. Please try again or paste an Image URL.");
+      safeAlert("Failed to process image. Please try another image or paste an Image URL.", "error");
     } finally {
       setMbUploading(false);
     }
