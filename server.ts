@@ -875,15 +875,15 @@ const defaultTrustedVendors = [
 // Global DB Object
 let db: {
   categories: typeof defaultCategories;
-  vendors: typeof defaultVendors;
+  vendors: any[];
   products: any[];
-  leads: typeof defaultLeads;
+  leads: any[];
   blogs: typeof defaultBlogs;
   banners: typeof defaultBanners;
   testimonials: typeof defaultTestimonials;
   settings: typeof defaultSettings;
-  notifications: typeof defaultNotifications;
-  currentUser: typeof defaultCurrentUser;
+  notifications: any[];
+  currentUser: any;
   leadAssignments: any[];
   users: any[];
   trustedVendors: any[];
@@ -990,9 +990,110 @@ function loadDb() {
         });
       }
 
+      // Ensure all seeded/demo records have is_demo = true and isDemo = true
+      const demoLeadIds = new Set(["lead-1", "lead-2", "lead-3"]);
+      const demoProductIds = new Set(["prod-1", "prod-2", "prod-3", "prod-4", "prod-5", "prod-6", "prod-7", "prod-8", "prod-9", "prod-10", "prod-pending"]);
+      const demoVendorIds = new Set(["ven-1", "ven-2", "ven-3", "ven-4", "ven-pending"]);
+      const demoUserIds = new Set(["user-demo", "user-admin", "user-vendor", "buyer-demo", "vendor-demo", "admin-demo"]);
+      const demoNotifIds = new Set(["not-1", "not-2"]);
+
+      if (db.leads) {
+        db.leads.forEach(l => {
+          if (demoLeadIds.has(l.id)) {
+            l.is_demo = true;
+            l.isDemo = true;
+            l.user_id = "user-demo";
+          }
+        });
+      }
+      if (db.products) {
+        db.products.forEach(p => {
+          if (demoProductIds.has(p.id)) {
+            p.is_demo = true;
+            p.isDemo = true;
+          }
+        });
+      }
+      if (db.vendors) {
+        db.vendors.forEach(v => {
+          if (demoVendorIds.has(v.id)) {
+            v.is_demo = true;
+            v.isDemo = true;
+            if (v.id === "ven-1") v.vendor_id = "user-vendor";
+            else v.vendor_id = v.id;
+          }
+        });
+      }
+      if (db.users) {
+        db.users.forEach(u => {
+          if (demoUserIds.has(u.id)) {
+            u.is_demo = true;
+            u.isDemo = true;
+          }
+        });
+      }
+      if (db.notifications) {
+        db.notifications.forEach(n => {
+          if (demoNotifIds.has(n.id)) {
+            n.is_demo = true;
+            n.isDemo = true;
+          }
+        });
+      }
+
       saveDb();
       console.log("Mock database loaded successfully from disk.");
     } else {
+      // Setup demo flags even for freshly created empty database
+      const demoLeadIds = new Set(["lead-1", "lead-2", "lead-3"]);
+      const demoProductIds = new Set(["prod-1", "prod-2", "prod-3", "prod-4", "prod-5", "prod-6", "prod-7", "prod-8", "prod-9", "prod-10", "prod-pending"]);
+      const demoVendorIds = new Set(["ven-1", "ven-2", "ven-3", "ven-4", "ven-pending"]);
+      const demoUserIds = new Set(["user-demo", "user-admin", "user-vendor", "buyer-demo", "vendor-demo", "admin-demo"]);
+      const demoNotifIds = new Set(["not-1", "not-2"]);
+
+      if (db.leads) {
+        db.leads.forEach(l => {
+          if (demoLeadIds.has(l.id)) {
+            l.is_demo = true;
+            l.isDemo = true;
+            l.user_id = "user-demo";
+          }
+        });
+      }
+      if (db.products) {
+        db.products.forEach(p => {
+          if (demoProductIds.has(p.id)) {
+            p.is_demo = true;
+            p.isDemo = true;
+          }
+        });
+      }
+      if (db.vendors) {
+        db.vendors.forEach(v => {
+          if (demoVendorIds.has(v.id)) {
+            v.is_demo = true;
+            v.isDemo = true;
+            if (v.id === "ven-1") v.vendor_id = "user-vendor";
+            else v.vendor_id = v.id;
+          }
+        });
+      }
+      if (db.users) {
+        db.users.forEach(u => {
+          if (demoUserIds.has(u.id)) {
+            u.is_demo = true;
+            u.isDemo = true;
+          }
+        });
+      }
+      if (db.notifications) {
+        db.notifications.forEach(n => {
+          if (demoNotifIds.has(n.id)) {
+            n.is_demo = true;
+            n.isDemo = true;
+          }
+        });
+      }
       saveDb();
     }
   } catch (err) {
@@ -1411,20 +1512,45 @@ async function initPostgres() {
       )
     `);
 
-    // Ensure leads table has title and city columns
+    // Ensure leads table has title, city, user_id, and is_demo columns
     try {
       await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS title VARCHAR(200)");
       await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS city VARCHAR(100)");
+      await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id VARCHAR(100)");
+      await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false");
     } catch (err) {
-      console.warn("Could not alter leads table to add title and city:", err);
+      console.warn("Could not alter leads table to add title, city, user_id, is_demo:", err);
     }
 
-    // Ensure profiles table has avatar and provider columns
+    // Ensure vendors table has vendor_id and is_demo columns
+    try {
+      await client.query("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS vendor_id VARCHAR(100)");
+      await client.query("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false");
+    } catch (err) {
+      console.warn("Could not alter vendors table:", err);
+    }
+
+    // Ensure products table has is_demo column
+    try {
+      await client.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false");
+    } catch (err) {
+      console.warn("Could not alter products table:", err);
+    }
+
+    // Ensure profiles table has avatar, provider, and is_demo columns
     try {
       await client.query("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar VARCHAR(500)");
       await client.query("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS provider VARCHAR(100)");
+      await client.query("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false");
     } catch (err) {
-      console.warn("Could not alter profiles table to add avatar and provider:", err);
+      console.warn("Could not alter profiles table to add avatar, provider, is_demo:", err);
+    }
+
+    // Ensure notifications table has is_demo column
+    try {
+      await client.query("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false");
+    } catch (err) {
+      console.warn("Could not alter notifications table:", err);
     }
 
     console.log("PostgreSQL tables checked/created.");
@@ -1630,6 +1756,16 @@ async function initPostgres() {
 }
 
 initPostgres();
+
+const isNewUser = (user: any): boolean => {
+  if (!user) return true; // Treat unauthenticated/anonymous as new user for safety
+  if (user.role === 'admin') return false; // Admin can see everything
+  const demoUserIds = new Set(["user-demo", "user-vendor", "user-admin", "buyer-demo", "vendor-demo", "admin-demo"]);
+  const demoEmails = new Set(["pramodobra95@gmail.com", "vendor@bantconfirm.com", "info.bouuz@gmail.com", "info.bouuz@gmail.co", "buyer@bantconfirm.com"]);
+  if (demoUserIds.has(user.id)) return false;
+  if (demoEmails.has(user.email?.toLowerCase())) return false;
+  return true;
+};
 
 // ==========================================
 // RESEND EMAIL DISPATCH SYSTEM
@@ -2057,9 +2193,9 @@ const sendVerifiedWelcomeEmail = async (name: string, email: string, role: strin
 // Welcome email for Buyers
 const sendBuyerWelcomeEmail = async (name: string, email: string) => {
   const html = getEmailTemplate(
-    "Welcome to BANTConfirm Sourcing!",
+    "Welcome to BANTConfirm",
     `
-      <h1>Welcome to BANTConfirm Sourcing, ${name}!</h1>
+      <h1>Welcome to BANTConfirm, ${name}!</h1>
       <p>We are thrilled to welcome you to India's most advanced B2B procurement verification ecosystem. BANTConfirm eliminates redundant cycles by ensuring your requirements are fully qualified under the strict BANT (Budget, Authority, Need, Timeline) framework before matching with verified partners.</p>
       
       <div class="card">
@@ -2079,12 +2215,13 @@ const sendBuyerWelcomeEmail = async (name: string, email: string) => {
       </div>
       
       <p>Log in to your BANTConfirm portal now to configure your company requirements and dispatch your first sourcing lead.</p>
-      <div style="text-align: center;">
-        <a href="https://bantconfirm.com" class="btn">Explore Sourcing Workspace</a>
-      </div>
-    `
+      <p>Website: <a href="https://bantconfirm.com">https://bantconfirm.com</a></p>
+      <p>Support Email: <a href="mailto:support@bantconfirm.com">support@bantconfirm.com</a></p>
+    `,
+    "Login to Platform",
+    "https://bantconfirm.com/login"
   );
-  await sendResendEmail(email, "Welcome to BANTConfirm - Verified B2B Enterprise Sourcing", html);
+  await sendResendEmail(email, "Welcome to BANTConfirm", html);
 };
 
 // Welcome email for Vendors (supports optional temporary password for manual onboarding)
@@ -2105,11 +2242,12 @@ const sendVendorWelcomeEmail = async (name: string, companyName: string, email: 
     "Welcome to the Partner Network",
     `
       <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Welcome to BANTConfirm Partner Network, ${name}!</h1>
-      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Thank you for registering <strong>${companyName}</strong> on BANTConfirm – India's premier B2B verified procurement and software sourcing marketplace.</p>
+      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Thank you for registering <strong>${companyName}</strong> on BANTConfirm – India's premier B2B verified procurement and software sourcing marketplace. Thank you for becoming a BANTConfirm Partner.</p>
       
       ${credentialsBlock}
 
-      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Our partner audit team has fast-tracked your verification. You can now showcase your solutions, list product catalogs, and respond to live verified procurement opportunities directly from your dashboard.</p>
+      <h2>Partner Approval & Review Process</h2>
+      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Our partner audit team will review your application. We perform full <strong>document verification</strong> (including GSTIN and PAN card details) and <strong>admin review</strong> before activating your marketplace listings. This ensures high trust and compliance across our network.</p>
       
       <div class="card" style="background-color: #ffffff; border: 1px solid #e2e8f0; padding: 18px; margin: 20px 0; border-radius: 12px;">
         <div class="card-title" style="color: #0f172a; font-weight: 700; font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">🚀 Quick Start Guide</div>
@@ -2127,74 +2265,76 @@ const sendVendorWelcomeEmail = async (name: string, companyName: string, email: 
         </div>
       </div>
       
-      <div style="text-align: center; margin-top: 24px;">
-        <a href="https://bantconfirm.com" style="background-color: #0066FF; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 14px; box-shadow: 0 4px 6px -1px rgba(0, 102, 255, 0.2);">Access Vendor Dashboard</a>
-      </div>
-    `
+      <p style="font-size: 13px; color: #475569;">Support Details: <a href="mailto:support@bantconfirm.com">support@bantconfirm.com</a> | Phone Helpline: +91 120 4000 000</p>
+    `,
+    "Access Vendor Dashboard",
+    "https://bantconfirm.com/dashboard"
   );
-  await sendResendEmail(email, "Welcome to BANTConfirm Partner Network - Sourcing & Leads Dispatch", html);
+  await sendResendEmail(email, "Welcome to BANTConfirm Partner Network", html);
 };
 
 // Dispatch email when enquiry is assigned to vendor by admin
 const sendEnquiryAssignedEmail = async (vendorName: string, vendorEmail: string, lead: any) => {
   const html = getEmailTemplate(
-    "New BANT Enquiry Assigned",
+    "New Qualified Lead Assigned",
     `
-      <h1 style="color: #0f172a; font-size: 22px; font-weight: 800; margin-bottom: 8px;">New BANT-Qualified Enquiry Assigned!</h1>
+      <h1 style="color: #0f172a; font-size: 22px; font-weight: 800; margin-bottom: 8px;">New Qualified Lead Assigned!</h1>
       <p style="color: #475569; font-size: 14px; line-height: 1.6;">Hello <strong>${vendorName}</strong>,</p>
       <p style="color: #475569; font-size: 14px; line-height: 1.6;">An administrator has assigned a premium BANT-qualified enterprise sourcing requirement to your partner account. Please review the details below and follow up promptly to capture this opportunity.</p>
       
       <div class="card" style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; margin: 20px 0; border-radius: 12px;">
-        <h3 style="margin-top:0; color:#0f172a; font-size:14px; font-weight:700; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">📋 Enquiry Specifications</h3>
+        <h3 style="margin-top:0; color:#0f172a; font-size:14px; font-weight:700; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">📋 Lead Specifications</h3>
         <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-top:10px;">
           <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="padding: 8px 0; font-weight: bold; color: #64748b; width: 130px;">Requirement Title</td>
-            <td style="padding: 8px 0; color: #0f172a; font-weight: bold;">${lead.title}</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b; width: 130px;">Lead ID</td>
+            <td style="padding: 8px 0; color: #0f172a; font-family: monospace;">${lead.id}</td>
           </tr>
           <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Budget Scope</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b; width: 130px;">Category</td>
+            <td style="padding: 8px 0; color: #0f172a;">${lead.category}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Budget</td>
             <td style="padding: 8px 0; color: #16a34a; font-weight: bold;">${lead.budget}</td>
           </tr>
           <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Implementation</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Timeline</td>
             <td style="padding: 8px 0; color: #0f172a;">${lead.timeline}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Requirement Title</td>
+            <td style="padding: 8px 0; color: #0f172a; font-weight: bold;">${lead.title}</td>
           </tr>
           <tr style="border-bottom: 1px solid #f1f5f9;">
             <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Decision Maker</td>
             <td style="padding: 8px 0; color: #0f172a;">${lead.contactName || "Verified Buyer"} (${lead.companyName || "Enterprise"})</td>
           </tr>
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Business Category</td>
-            <td style="padding: 8px 0; color: #0f172a;">${lead.category}</td>
-          </tr>
         </table>
       </div>
       
       <p style="color: #475569; font-size: 14px; line-height: 1.6;">You can log in to your BANTConfirm Vendor Panel to view complete contact details, download technical specifications, and update the status of this enquiry to show your progress to the administrator.</p>
-      
-      <div style="text-align: center; margin-top: 24px;">
-        <a href="https://bantconfirm.com" style="background-color: #0066FF; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 14px; box-shadow: 0 4px 6px -1px rgba(0, 102, 255, 0.2);">View Enquiry in Vendor Panel</a>
-      </div>
-    `
+    `,
+    "View Assigned Lead",
+    "https://bantconfirm.com/dashboard"
   );
-  await sendResendEmail(vendorEmail, `🚨 New BANT Sourcing Lead Assigned: ${lead.title}`, html);
+  await sendResendEmail(vendorEmail, "New Qualified Lead Assigned", html);
 };
 
 // New Enquiry post email (dispatched to buyer + administrative alerts)
 const sendNewEnquiryEmail = async (lead: any) => {
   const timestamp = new Date(lead.createdAt || Date.now()).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
   const buyerHtml = getEmailTemplate(
-    "Your Enquiry Has Been Successfully Received – BANTConfirm",
+    "Your Inquiry Has Been Received",
     `
-      <h1>Your Sourcing Request Has Been Received</h1>
+      <h1>Your Inquiry Has Been Received</h1>
       <p>Dear <strong>${lead.contactName || "Enterprise Partner"}</strong>,</p>
       <p>Thank you for submitting your enterprise sourcing requirement on BANTConfirm. Your request is now officially registered, and our audit team is verifying the technical specifications against our validation framework.</p>
 
       <div class="card">
-        <div class="card-title">Enquiry Summary</div>
+        <div class="card-title">Inquiry Summary</div>
         <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
           <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="padding: 8px 0; font-weight: bold; color: #64748b; width: 130px;">Enquiry ID</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b; width: 130px;">Inquiry ID</td>
             <td style="padding: 8px 0; color: #0f172a; font-family: monospace; font-weight: bold;">${lead.id}</td>
           </tr>
           <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -2261,7 +2401,7 @@ const sendNewEnquiryEmail = async (lead: any) => {
   );
 
   if (lead.email) {
-    await sendResendEmail(lead.email, "Your Enquiry Has Been Successfully Received – BANTConfirm", buyerHtml);
+    await sendResendEmail(lead.email, "Your Inquiry Has Been Received", buyerHtml);
   }
   await sendResendEmail("admin@bantconfirm.com", `ADMIN ALERT: New ${lead.category} Sourcing Request from ${lead.companyName}`, adminHtml);
 
@@ -3038,6 +3178,22 @@ app.delete("/api/categories/:id", (req, res) => {
 app.get("/api/products", (req, res) => {
   const { approvedOnly, category, vendorId, query } = req.query;
   let list = [...db.products];
+  const currentUser = db.currentUser;
+
+  // Apply User/Vendor specific product isolation and demo data filtering
+  if (currentUser) {
+    if (currentUser.role === 'vendor') {
+      const vendorIdToFilter = currentUser.vendorId || currentUser.id;
+      list = list.filter(p => p.vendorId === vendorIdToFilter);
+      if (isNewUser(currentUser)) {
+        list = list.filter(p => !p.is_demo && !p.isDemo);
+      }
+    } else if (currentUser.role === 'buyer') {
+      if (isNewUser(currentUser)) {
+        list = list.filter(p => !p.is_demo && !p.isDemo);
+      }
+    }
+  }
 
   if (approvedOnly === "true") {
     list = list.filter(p => p.approved);
@@ -3207,7 +3363,22 @@ app.post("/api/reviews", (req, res) => {
 
 // Vendors API
 app.get("/api/vendors", (req, res) => {
-  res.json(db.vendors);
+  let list = [...db.vendors];
+  const currentUser = db.currentUser;
+
+  // Apply User/Vendor specific vendor isolation and demo data filtering
+  if (currentUser) {
+    if (currentUser.role === 'vendor') {
+      const vendorIdToFilter = currentUser.vendorId || currentUser.id;
+      list = list.filter(v => v.id === vendorIdToFilter);
+    } else if (currentUser.role === 'buyer') {
+      if (isNewUser(currentUser)) {
+        list = list.filter(v => !v.is_demo && !v.isDemo);
+      }
+    }
+  }
+
+  res.json(list);
 });
 
 // Vendor Registration / Update (handles manual addition by Admin with email & password auto-onboarding)
@@ -3398,6 +3569,7 @@ app.delete("/api/users/:id", async (req, res) => {
 // Leads API
 app.get("/api/leads", async (req, res) => {
   const { vendorId } = req.query;
+  const currentUser = db.currentUser;
 
   if (pgPool) {
     try {
@@ -3434,7 +3606,10 @@ app.get("/api/leads", async (req, res) => {
             need: l.need || descVal || "Confirmed requirement",
             timeline: timelineVal
           },
-          assignedVendors: [],
+          assignedVendors: l.assignedVendors || [],
+          user_id: l.user_id,
+          is_demo: l.is_demo || l.isDemo || false,
+          isDemo: l.is_demo || l.isDemo || false,
           createdAt: createdAtVal
         };
       });
@@ -3442,37 +3617,109 @@ app.get("/api/leads", async (req, res) => {
       // Sort in JavaScript
       list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
-      if (vendorId) {
-        // Query assignments safely
-        const laQuery = await pgPool.query("SELECT * FROM lead_assignments WHERE vendorId = $1", [vendorId]);
-        const leadAssignments = laQuery.rows;
-        const assignedIds = leadAssignments.map(la => la.leadid || la.leadId);
-        list = list.map(lead => ({
-          ...lead,
-          isAssignedToMe: assignedIds.includes(lead.id),
-          assignmentStatus: leadAssignments.find(la => (la.leadid || la.leadId) === lead.id)?.status || 'None',
-          isPurchasedByMe: leadAssignments.find(la => (la.leadid || la.leadId) === lead.id)?.purchased || false
-        }));
+      // Query assignments safely
+      const laQuery = await pgPool.query("SELECT * FROM lead_assignments");
+      const allLeadAssignments = laQuery.rows;
+
+      // Apply User Specific Data Isolation and Demo Filtering for Postgres
+      if (!currentUser) {
+        list = [];
+      } else if (currentUser.role === 'buyer') {
+        list = list.filter(lead =>
+          (lead.email && lead.email.toLowerCase() === currentUser.email?.toLowerCase()) ||
+          (lead.user_id === currentUser.id)
+        );
+        if (isNewUser(currentUser)) {
+          list = list.filter(lead => !lead.is_demo && !lead.isDemo);
+        }
+      } else if (currentUser.role === 'vendor') {
+        const vendorIdToFilter = vendorId || currentUser.vendorId || currentUser.id;
+        const assignedIds = allLeadAssignments
+          .filter(la => (la.vendorid || la.vendorId) === vendorIdToFilter)
+          .map(la => la.leadid || la.leadId);
+
+        list = list.filter(lead =>
+          assignedIds.includes(lead.id) ||
+          (lead.assignedVendors && lead.assignedVendors.includes(vendorIdToFilter))
+        );
+
+        if (isNewUser(currentUser)) {
+          list = list.filter(lead => !lead.is_demo && !lead.isDemo);
+        }
+
+        list = list.map(lead => {
+          const laRecord = allLeadAssignments.find(la => (la.leadid || la.leadId) === lead.id && (la.vendorid || la.vendorId) === vendorIdToFilter);
+          return {
+            ...lead,
+            isAssignedToMe: true,
+            assignmentStatus: laRecord?.status || 'None',
+            isPurchasedByMe: laRecord?.purchased || false
+          };
+        });
+      } else if (currentUser.role === 'admin') {
+        // Admin gets everything augmented with assignments
+        list = list.map(lead => {
+          const assignments = allLeadAssignments
+            .filter(la => (la.leadid || la.leadId) === lead.id)
+            .map(la => {
+              const vendor = db.vendors.find(v => v.id === (la.vendorid || la.vendorId));
+              return {
+                vendorId: la.vendorid || la.vendorId,
+                companyName: vendor ? vendor.companyName : `Partner ID: ${la.vendorid || la.vendorId}`,
+                status: la.status || "New",
+                purchased: la.purchased || false,
+                updatedAt: la.createdat || la.createdAt
+              };
+            });
+          return {
+            ...lead,
+            assignments: assignments || []
+          };
+        });
       }
+
       return res.json(list);
     } catch (err: any) {
       console.error("Error querying leads from postgres, falling back to local JSON database:", err.message || err);
     }
   }
 
-  if (vendorId) {
-    const leadAssignments = db.leadAssignments.filter(la => la.vendorId === vendorId);
+  // Fallback Local JSON Database branches
+  let localLeads = [...db.leads];
+
+  if (!currentUser) {
+    localLeads = [];
+  } else if (currentUser.role === 'buyer') {
+    localLeads = localLeads.filter(lead =>
+      (lead.email && lead.email.toLowerCase() === currentUser.email?.toLowerCase()) ||
+      (lead.user_id === currentUser.id)
+    );
+    if (isNewUser(currentUser)) {
+      localLeads = localLeads.filter(lead => !lead.is_demo && !lead.isDemo);
+    }
+  } else if (currentUser.role === 'vendor') {
+    const vendorIdToFilter = vendorId || currentUser.vendorId || currentUser.id;
+    const leadAssignments = db.leadAssignments.filter(la => la.vendorId === vendorIdToFilter);
     const assignedIds = leadAssignments.map(la => la.leadId);
-    
-    const augmentedLeads = db.leads.map(lead => ({
+
+    localLeads = localLeads.filter(lead =>
+      assignedIds.includes(lead.id) ||
+      (lead.assignedVendors && lead.assignedVendors.includes(vendorIdToFilter))
+    );
+
+    if (isNewUser(currentUser)) {
+      localLeads = localLeads.filter(lead => !lead.is_demo && !lead.isDemo);
+    }
+
+    localLeads = localLeads.map(lead => ({
       ...lead,
-      isAssignedToMe: assignedIds.includes(lead.id),
+      isAssignedToMe: true,
       assignmentStatus: leadAssignments.find(la => la.leadId === lead.id)?.status || 'None',
       isPurchasedByMe: leadAssignments.find(la => la.leadId === lead.id)?.purchased || false
     }));
-    res.json(augmentedLeads);
-  } else {
-    const augmentedLeads = db.leads.map(lead => {
+  } else if (currentUser.role === 'admin') {
+    // Admin gets everything augmented with assignments
+    localLeads = localLeads.map(lead => {
       const assignments = db.leadAssignments.filter(la => la.leadId === lead.id).map(la => {
         const vendor = db.vendors.find(v => v.id === la.vendorId);
         return {
@@ -3488,8 +3735,9 @@ app.get("/api/leads", async (req, res) => {
         assignments: assignments || []
       };
     });
-    res.json(augmentedLeads);
   }
+
+  res.json(localLeads);
 });
 
 // Create Lead (Post Requirement)
@@ -4506,7 +4754,22 @@ app.delete("/api/admin/trusted-vendors/:id", async (req, res) => {
 
 // Notifications API
 app.get("/api/notifications", (req, res) => {
-  res.json(db.notifications);
+  let list = [...db.notifications];
+  const currentUser = db.currentUser;
+
+  // Apply User/Vendor specific notifications isolation and demo data filtering
+  if (currentUser) {
+    if (currentUser.role !== 'admin') {
+      list = list.filter(n => n.userId === currentUser.id || n.userId === currentUser.vendorId);
+      if (isNewUser(currentUser)) {
+        list = list.filter(n => !n.is_demo && !n.isDemo);
+      }
+    }
+  } else {
+    list = [];
+  }
+
+  res.json(list);
 });
 
 app.post("/api/notifications/read", (req, res) => {

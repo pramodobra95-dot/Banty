@@ -1012,21 +1012,79 @@ export default function App() {
       let resMarketingBanners: any[] = [];
 
       if (isSupabaseConfigured) {
+        const authRes = await supabase.auth.getUser();
+        let tempUser: any = null;
+        if (authRes.data?.user) {
+          const uMeta = authRes.data.user.user_metadata;
+          const emailLower = (authRes.data.user.email || "").trim().toLowerCase();
+          let userRole = uMeta?.role || "buyer";
+          if (emailLower === "admin@bantconfirm.com" || emailLower === "info.bouuz@gmail.com" || emailLower === "info.bouuz@gmail.co" || emailLower === "pramodobra95@gmail.com") {
+            userRole = "admin";
+          }
+          tempUser = {
+            id: authRes.data.user.id,
+            email: authRes.data.user.email || "",
+            name: uMeta?.name || authRes.data.user.email?.split("@")[0] || "User",
+            role: userRole,
+            companyName: uMeta?.companyName || "",
+            mobile: uMeta?.mobile || "",
+            city: uMeta?.city || "",
+            vendorId: uMeta?.vendorId || null
+          };
+        }
+
+        // Apply dynamic Row Level Security (RLS) equivalent client-side filtering queries
+        let leadsQuery = supabase.from("leads").select("*");
+        let vendorsQuery = supabase.from("vendors").select("*");
+        let productsQuery = supabase.from("products").select("*");
+        let notificationsQuery = supabase.from("notifications").select("*");
+
+        if (tempUser) {
+          const isDemoUser = tempUser.id === "user-demo" || tempUser.id === "user-vendor" || tempUser.email?.toLowerCase() === "pramodobra95@gmail.com" || tempUser.email?.toLowerCase() === "buyer@bantconfirm.com";
+          if (tempUser.role === 'buyer') {
+            leadsQuery = leadsQuery.or(`email.eq.${tempUser.email},user_id.eq.${tempUser.id}`);
+            notificationsQuery = notificationsQuery.eq("userId", tempUser.id);
+            if (!isDemoUser) {
+              leadsQuery = leadsQuery.eq("is_demo", false);
+              productsQuery = productsQuery.eq("is_demo", false);
+              vendorsQuery = vendorsQuery.eq("is_demo", false);
+              notificationsQuery = notificationsQuery.eq("is_demo", false);
+            }
+          } else if (tempUser.role === 'vendor') {
+            const vendorIdToFilter = tempUser.vendorId || tempUser.id;
+            vendorsQuery = vendorsQuery.eq("id", vendorIdToFilter);
+            productsQuery = productsQuery.eq("vendorId", vendorIdToFilter);
+            leadsQuery = leadsQuery.or(`assignedVendorId.eq.${vendorIdToFilter}`);
+            notificationsQuery = notificationsQuery.or(`userId.eq.${tempUser.id},userId.eq.${vendorIdToFilter}`);
+            if (!isDemoUser) {
+              productsQuery = productsQuery.eq("is_demo", false);
+              vendorsQuery = vendorsQuery.eq("is_demo", false);
+              leadsQuery = leadsQuery.eq("is_demo", false);
+              notificationsQuery = notificationsQuery.eq("is_demo", false);
+            }
+          }
+        } else {
+          // Public visitor
+          leadsQuery = leadsQuery.eq("id", "none");
+          notificationsQuery = notificationsQuery.eq("id", "none");
+          productsQuery = productsQuery.eq("is_demo", false);
+          vendorsQuery = vendorsQuery.eq("is_demo", false);
+        }
+
         const [
           catsRes, prodsRes, vendorsRes, leadsRes,
           blogsRes, bannersRes, testimonialsRes, notificationsRes,
-          settingsRes, authRes, trustedVendorsRes, marketingBannersRes
+          settingsRes, trustedVendorsRes, marketingBannersRes
         ] = await Promise.all([
           supabase.from("categories").select("*"),
-          supabase.from("products").select("*"),
-          supabase.from("vendors").select("*"),
-          supabase.from("leads").select("*"),
+          productsQuery,
+          vendorsQuery,
+          leadsQuery,
           supabase.from("blogs").select("*"),
           supabase.from("banners").select("*"),
           supabase.from("testimonials").select("*"),
-          supabase.from("notifications").select("*"),
+          notificationsQuery,
           supabase.from("settings").select("*"),
-          supabase.auth.getUser(),
           supabase.from("trusted_vendors").select("*"),
           supabase.from("marketing_banners").select("*")
         ]);
@@ -1200,7 +1258,13 @@ export default function App() {
             console.error("[Supabase Error] profiles fetch:", profilesRes.error);
           }
           if (profilesRes.data && profilesRes.data.length > 0) {
-            profilesData = profilesRes.data;
+            if (tempUser && tempUser.role === 'admin') {
+              profilesData = profilesRes.data;
+            } else if (tempUser) {
+              profilesData = profilesRes.data.filter((u: any) => u.id === tempUser.id || u.email === tempUser.email);
+            } else {
+              profilesData = [];
+            }
           }
         } catch (err) {
           console.warn("Could not query profiles from Supabase:", err);
