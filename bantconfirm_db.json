@@ -109,10 +109,7 @@
       "leadsCount": 14,
       "revenue": 450000,
       "viewsCount": 1250,
-      "createdAt": "2026-06-09T17:37:08.784Z",
-      "is_demo": true,
-      "isDemo": true,
-      "vendor_id": "user-vendor"
+      "createdAt": "2026-06-09T17:37:08.784Z"
     },
     {
       "id": "ven-2",
@@ -137,10 +134,7 @@
       "leadsCount": 9,
       "revenue": 210000,
       "viewsCount": 890,
-      "createdAt": "2026-06-14T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true,
-      "vendor_id": "ven-2"
+      "createdAt": "2026-06-14T17:37:08.785Z"
     },
     {
       "id": "ven-3",
@@ -164,10 +158,7 @@
       "leadsCount": 18,
       "revenue": 580000,
       "viewsCount": 1620,
-      "createdAt": "2026-05-30T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true,
-      "vendor_id": "ven-3"
+      "createdAt": "2026-05-30T17:37:08.785Z"
     },
     {
       "id": "ven-4",
@@ -192,10 +183,7 @@
       "leadsCount": 22,
       "revenue": 940000,
       "viewsCount": 2100,
-      "createdAt": "2026-06-24T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true,
-      "vendor_id": "ven-4"
+      "createdAt": "2026-06-24T17:37:08.785Z"
     },
     {
       "id": "ven-pending",
@@ -218,10 +206,7 @@
       "leadsCount": 0,
       "revenue": 0,
       "viewsCount": 120,
-      "createdAt": "2026-07-09T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true,
-      "vendor_id": "ven-pending"
+      "createdAt": "2026-07-09T17:37:08.785Z"
     }
   ],
   "products": [
@@ -261,9 +246,7 @@
         }
       ],
       "createdAt": "2026-06-11T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-2",
@@ -296,9 +279,7 @@
         }
       ],
       "createdAt": "2026-06-13T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-3",
@@ -331,9 +312,7 @@
         }
       ],
       "createdAt": "2026-06-04T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-4",
@@ -366,9 +345,7 @@
         }
       ],
       "createdAt": "2026-06-01T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-5",
@@ -401,9 +378,7 @@
         }
       ],
       "createdAt": "2026-06-19T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-6",
@@ -436,9 +411,7 @@
         }
       ],
       "createdAt": "2026-06-29T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-7",
@@ -471,9 +444,7 @@
         }
       ],
       "createdAt": "2026-06-27T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-pending",
@@ -499,9 +470,7 @@
       "videoUrl": "",
       "faqs": [],
       "createdAt": "2026-07-09T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-8",
@@ -534,9 +503,7 @@
         }
       ],
       "createdAt": "2026-07-04T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-9",
@@ -569,9 +536,7 @@
         }
       ],
       "createdAt": "2026-07-05T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     },
     {
       "id": "prod-10",
@@ -604,9 +569,7 @@
         }
       ],
       "createdAt": "2026-07-07T17:37:08.785Z",
-      "showSimilar": true,
-      "is_demo": true,
-      "isDemo": true
+      "showSimilar": true
     }
   ],
   "leads": [
@@ -633,10 +596,7 @@
         "ven-1",
         "ven-2"
       ],
-      "createdAt": "2026-07-05T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true,
-      "user_id": "user-demo"
+      "createdAt": "2026-07-05T17:37:08.785Z"
     },
     {
       "id": "lead-2",
@@ -658,10 +618,7 @@
         "timeline": "Target launch by middle of next month"
       },
       "assignedVendors": [],
-      "createdAt": "2026-07-07T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true,
-      "user_id": "user-demo"
+      "createdAt": "2026-07-07T17:37:08.785Z"
     },
     {
       "id": "lead-3",
@@ -685,10 +642,7 @@
       "assignedVendors": [
         "ven-3"
       ],
-      "createdAt": "2026-07-02T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true,
-      "user_id": "user-demo"
+      "createdAt": "2026-07-02T17:37:08.785Z"
     }
   ],
   "blogs": [
@@ -820,9 +774,7 @@
       "title": "Requirement Submitted Successfully",
       "message": "Your requirement for Omnichannel CRM with WhatsApp integration has been received and verified by our BANT auditing team.",
       "read": false,
-      "createdAt": "2026-07-09T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true
+      "createdAt": "2026-07-09T17:37:08.785Z"
     },
     {
       "id": "not-2",
@@ -830,21 +782,20 @@
       "title": "New Matching Lead Alert",
       "message": "A high quality qualified Lead matching 'CRM Software' has been assigned to your panel. Purchase credentials now.",
       "read": false,
-      "createdAt": "2026-07-09T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true
+      "createdAt": "2026-07-09T17:37:08.785Z"
     }
   ],
   "currentUser": {
     "id": "user-demo",
-    "name": "Anand Sen",
-    "email": "anand@zenithedu.com",
-    "companyName": "Zenith Education Ltd",
-    "mobile": "+91 98888 77777",
-    "city": "Mumbai",
-    "gstNumber": "27AAAAA1111A1Z1",
+    "name": "Prabhu Deva",
+    "email": "pramodobra95@gmail.com",
+    "companyName": "Deva Consulting & Co",
+    "mobile": "+91 94444 12345",
+    "city": "Chennai",
+    "gstNumber": "33ABCDE1234F1Z0",
     "businessType": "SME Services",
-    "role": "buyer"
+    "role": "buyer",
+    "createdAt": "2026-07-09T17:37:08.785Z"
   },
   "leadAssignments": [
     {
@@ -881,9 +832,7 @@
       "mobile": "+91 94444 12345",
       "city": "Chennai",
       "role": "buyer",
-      "createdAt": "2026-07-09T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true
+      "createdAt": "2026-07-09T17:37:08.785Z"
     },
     {
       "id": "user-admin",
@@ -893,9 +842,7 @@
       "mobile": "+91 98765 43210",
       "city": "Mumbai",
       "role": "admin",
-      "createdAt": "2026-07-09T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true
+      "createdAt": "2026-07-09T17:37:08.785Z"
     },
     {
       "id": "user-vendor",
@@ -905,9 +852,7 @@
       "mobile": "+91 91111 22222",
       "city": "Mumbai",
       "role": "vendor",
-      "createdAt": "2026-07-09T17:37:08.785Z",
-      "is_demo": true,
-      "isDemo": true
+      "createdAt": "2026-07-09T17:37:08.785Z"
     }
   ],
   "trustedVendors": [
