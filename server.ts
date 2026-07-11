@@ -888,6 +888,7 @@ let db: {
   users: any[];
   trustedVendors: any[];
   marketingBanners: any[];
+  partnerRegistrations?: any[];
   reviews?: any[];
   resetTokens?: Record<string, any>;
   resendLogs?: any[];
@@ -910,6 +911,7 @@ let db: {
   users: defaultUsers,
   trustedVendors: defaultTrustedVendors,
   marketingBanners: defaultMarketingBanners,
+  partnerRegistrations: [],
   resendLogs: []
 };
 
@@ -921,6 +923,9 @@ function loadDb() {
       db = JSON.parse(raw);
       if (!db.resendLogs) {
         db.resendLogs = [];
+      }
+      if (!db.partnerRegistrations) {
+        db.partnerRegistrations = [];
       }
       if (!db.users) {
         db.users = defaultUsers;
@@ -1411,6 +1416,23 @@ async function initPostgres() {
       )
     `);
 
+    // 14. Create partner_registrations table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS partner_registrations (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        "companyName" VARCHAR(200) NOT NULL,
+        mobile VARCHAR(50),
+        email VARCHAR(100) NOT NULL,
+        products TEXT,
+        description TEXT,
+        "createdAt" VARCHAR(100) NOT NULL,
+        status VARCHAR(50) DEFAULT 'Pending',
+        source VARCHAR(50) DEFAULT 'PartnerForm',
+        "userId" VARCHAR(100)
+      )
+    `);
+
     // Ensure leads table has title and city columns
     try {
       await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS title VARCHAR(200)");
@@ -1445,7 +1467,8 @@ async function initPostgres() {
         "lead_assignments",
         "profiles",
         "trusted_vendors",
-        "marketing_banners"
+        "marketing_banners",
+        "partner_registrations"
       ];
       for (const table of rlsTables) {
         await client.query(`ALTER TABLE IF EXISTS public.${table} DISABLE ROW LEVEL SECURITY`).catch(() => {});
@@ -2600,25 +2623,195 @@ app.post("/api/auth/login", async (req, res) => {
 // API - Register Partner (With Auto-Onboarding & Emails)
 app.post("/api/auth/register-partner", async (req, res) => {
   const { name, companyName, mobile, email, products, description } = req.body;
+  const emailLower = email ? email.trim().toLowerCase() : "";
   const vendorId = `ven-${Date.now()}`;
   const userId = `user-${Date.now()}`;
+
+  // Find existing user/vendor by email
+  let existingUser: any = null;
+  if (db.users) {
+    existingUser = db.users.find((u: any) => u.email && u.email.trim().toLowerCase() === emailLower);
+  }
+  if (!existingUser && pgPool) {
+    try {
+      const resUser = await pgPool.query("SELECT * FROM profiles WHERE LOWER(email) = $1 LIMIT 1", [emailLower]);
+      if (resUser.rows.length > 0) {
+        existingUser = resUser.rows[0];
+      }
+    } catch (err) {
+      console.error("Error checking existing user in Postgres:", err);
+    }
+  }
+
+  const isDuplicate = !!existingUser;
+  const regId = `reg-${Date.now()}`;
+  const createdAt = new Date().toISOString();
   
-  const newUser = {
-    id: userId,
+  // Find if there's already a registration for this email
+  if (!db.partnerRegistrations) {
+    db.partnerRegistrations = [];
+  }
+  let existingReg = db.partnerRegistrations.find((r: any) => r.email && r.email.trim().toLowerCase() === emailLower);
+
+  if (!existingReg && pgPool) {
+    try {
+      const resReg = await pgPool.query("SELECT * FROM partner_registrations WHERE LOWER(email) = $1 LIMIT 1", [emailLower]);
+      if (resReg.rows.length > 0) {
+        existingReg = resReg.rows[0];
+      }
+    } catch (err) {
+      console.error("Error checking existing registration in Postgres:", err);
+    }
+  }
+
+  const registrationEntry = {
+    id: existingReg ? existingReg.id : regId,
     name: name || "Vendor Partner",
-    email: email || "partner@corp.in",
+    companyName: companyName || "New SaaS Corp",
+    mobile: mobile || "",
+    email: emailLower,
+    products: products || "",
+    description: description || "",
+    createdAt: existingReg ? existingReg.createdAt : createdAt,
+    status: "Pending", // Pending, Contacted, Under Review, Approved, Rejected
+    source: "PartnerForm",
+    userId: existingUser ? existingUser.id : null
+  };
+
+  // Update memory partnerRegistrations
+  if (existingReg) {
+    db.partnerRegistrations = db.partnerRegistrations.map((r: any) =>
+      r.id === existingReg.id ? registrationEntry : r
+    );
+  } else {
+    db.partnerRegistrations.push(registrationEntry);
+  }
+
+  // Update PostgreSQL
+  if (pgPool) {
+    try {
+      await pgPool.query(
+        `INSERT INTO partner_registrations (id, name, "companyName", mobile, email, products, description, "createdAt", status, source, "userId")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name,
+           "companyName" = EXCLUDED."companyName",
+           mobile = EXCLUDED.mobile,
+           products = EXCLUDED.products,
+           description = EXCLUDED.description,
+           status = EXCLUDED.status,
+           "userId" = EXCLUDED."userId"`,
+        [
+          registrationEntry.id,
+          registrationEntry.name,
+          registrationEntry.companyName,
+          registrationEntry.mobile,
+          registrationEntry.email,
+          registrationEntry.products,
+          registrationEntry.description,
+          registrationEntry.createdAt,
+          registrationEntry.status,
+          registrationEntry.source,
+          registrationEntry.userId
+        ]
+      );
+    } catch (err) {
+      console.error("Error saving partner registration to Postgres:", err);
+    }
+  }
+
+  // Admin Notification
+  if (!db.notifications) db.notifications = [];
+  const notifId = `notif-${Date.now()}`;
+  const notifMessage = isDuplicate
+    ? `Duplicate partner registration submitted by existing user: ${name} (${companyName}) [${emailLower}]. Registration status set to Pending.`
+    : `New BANTConfirm Partner Registration received from ${name} (${companyName}) [${emailLower}].`;
+
+  const notif = {
+    id: notifId,
+    userId: "admin",
+    title: isDuplicate ? "Duplicate Partner Registry" : "New Partner Registry",
+    message: notifMessage,
+    read: false,
+    createdAt: createdAt
+  };
+  db.notifications.unshift(notif);
+
+  if (pgPool) {
+    try {
+      await pgPool.query(
+        `INSERT INTO notifications (id, title, message, type, read, createdAt)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [notif.id, notif.title, notif.message, "Alert", notif.read, notif.createdAt]
+      );
+    } catch (err) {
+      console.error("Error saving notification to Postgres:", err);
+    }
+  }
+
+  // Branded confirmation email to vendor
+  const vendorEmailHtml = getEmailTemplate(
+    "Thank you for Registering as a BANTConfirm Partner",
+    `
+      <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Thank you for your interest!</h1>
+      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Dear <strong>${name}</strong>,</p>
+      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Your registration has been received successfully. We are excited about your interest in becoming a BANTConfirm Certified Partner.</p>
+      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Our team will review your details shortly. A BANTConfirm representative will contact you to complete the next steps.</p>
+
+      <div class="card" style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 18px; margin: 20px 0; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+        <h3 style="margin-top: 0; color: #0f172a; font-size: 14px; font-weight: 700; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">Your Partner Application Details</h3>
+        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Company Name:</strong> ${companyName}</p>
+        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Representative:</strong> ${name}</p>
+        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Mobile:</strong> ${mobile || "N/A"}</p>
+        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Email Address:</strong> ${emailLower}</p>
+        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>IT Solutions/Products:</strong> ${products || "N/A"}</p>
+        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Company Description:</strong> ${description || "N/A"}</p>
+      </div>
+
+      <p style="font-size: 13px; color: #475569;">Support Details: <a href="mailto:support@bantconfirm.com">support@bantconfirm.com</a> | Phone Helpline: +91 120 4000 000</p>
+    `,
+    "Visit BANTConfirm Portal",
+    "https://bantconfirm.com"
+  );
+  sendResendEmail(emailLower, "Thank you for Registering as a BANTConfirm Partner", vendorEmailHtml).catch(console.error);
+
+  // Send alert to Admin
+  const adminAlertHtml = getEmailTemplate(
+    "New Partner Application Registered",
+    `
+      <h1>New Certified IT Vendor Registration</h1>
+      <p>A new software or IT provider has registered on the platform and is awaiting admin review:</p>
+      <ul>
+        <li><strong>Company Name:</strong> ${companyName}</li>
+        <li><strong>Representative Name:</strong> ${name}</li>
+        <li><strong>Mobile:</strong> ${mobile || "N/A"}</li>
+        <li><strong>Email:</strong> ${emailLower}</li>
+        <li><strong>Products/Services:</strong> ${products || "N/A"}</li>
+        <li><strong>Description:</strong> ${description || "N/A"}</li>
+        <li><strong>Duplicate Check:</strong> ${isDuplicate ? "Duplicate Email Detected (Linked to existing account)" : "New unique registration"}</li>
+      </ul>
+    `
+  );
+  sendResendEmail("pramodobra95@gmail.com", `New Partner Registration - ${companyName}`, adminAlertHtml).catch(console.error);
+
+  // For visual demo/simulator purposes, return a preview user and vendor object so they see the flow in sandbox
+  const demoUser = {
+    id: existingUser ? existingUser.id : userId,
+    name: name || "Vendor Partner",
+    email: emailLower,
     companyName: companyName || "New SaaS Corp",
     mobile: mobile || "",
     city: "Mumbai",
     gstNumber: "27AAAAA1111A1Z1",
     businessType: "Solution Provider",
     role: "vendor",
-    vendorId: vendorId,
-    createdAt: new Date().toISOString()
+    vendorId: existingUser ? (existingUser.vendorId || vendorId) : vendorId,
+    createdAt: createdAt,
+    is_demo: true // flagged to indicate they are a preview session pending actual approval
   };
 
-  const newVen = {
-    id: vendorId,
+  const demoVen = {
+    id: demoUser.vendorId,
     companyName: companyName || "New SaaS Corp",
     name: name || "Vendor Partner",
     logo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=120&auto=format&fit=crop&q=60",
@@ -2629,7 +2822,7 @@ app.post("/api/auth/register-partner", async (req, res) => {
     productsOffered: products ? [products] : [],
     rating: 5.0,
     location: "India",
-    approved: true, // Auto-approve to bypass document check and allow instant listing
+    approved: true, // Auto-approve the preview session so vendor panel demo works beautifully
     docVerified: true,
     plan: "Free",
     productsCount: 0,
@@ -2637,54 +2830,13 @@ app.post("/api/auth/register-partner", async (req, res) => {
     revenue: 0,
     viewsCount: 0,
     description: description || "Certified BANTConfirm Solution Provider Partner.",
-    createdAt: newUser.createdAt
+    createdAt: createdAt
   };
 
-  db.currentUser = newUser;
-  if (!db.users) db.users = [];
-  db.users.push(newUser);
-  if (!db.vendors) db.vendors = [];
-  db.vendors.push(newVen);
-
-  // Add system notifications
-  if (!db.notifications) db.notifications = [];
-  const notif = {
-    id: `notif-${Date.now()}`,
-    userId: userId,
-    title: "Welcome to BANTConfirm!",
-    message: "You have registered as a Certified Partner. Welcome Email & Confirmation has been dispatched.",
-    read: false,
-    createdAt: new Date().toISOString()
-  };
-  db.notifications.unshift(notif);
-
-  if (pgPool) {
-    try {
-      await resilientInsertProfile(newUser);
-      
-      await pgPool.query(
-        `INSERT INTO vendors (id, companyName, name, logo, gstNumber, panNumber, website, businessCategory, productsOffered, rating, location, approved, docVerified, plan, productsCount, leadsCount, revenue, viewsCount, createdAt) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-         ON CONFLICT (id) DO UPDATE SET companyName = EXCLUDED.companyName, name = EXCLUDED.name`,
-        [newVen.id, newVen.companyName, newVen.name, newVen.logo, newVen.gstNumber, newVen.panNumber, newVen.website, newVen.businessCategory, JSON.stringify(newVen.productsOffered), newVen.rating, newVen.location, newVen.approved, newVen.docVerified, newVen.plan, newVen.productsCount, newVen.leadsCount, newVen.revenue, newVen.viewsCount, newVen.createdAt]
-      );
-
-      await pgPool.query(
-        `INSERT INTO notifications (id, title, message, type, read, createdAt)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [notif.id, notif.title, notif.message, "Alert", notif.read, notif.createdAt]
-      );
-    } catch (err) {
-      console.error("Error inserting register-partner to postgres:", err);
-    }
-  }
-
-  // Send welcome email and admin alerts for self-registered partner
-  sendVendorWelcomeEmail(newUser.name, newVen.companyName, newUser.email).catch(console.error);
-  sendVendorRegisterAdminAlert(newVen).catch(console.error);
-
+  db.currentUser = demoUser;
   saveDb();
-  res.status(201).json({ success: true, user: newUser, vendor: newVen });
+
+  res.status(201).json({ success: true, user: demoUser, vendor: demoVen });
 });
 
 // API - Sign Up
@@ -2752,9 +2904,103 @@ app.post("/api/auth/signup", async (req, res) => {
       }
     }
 
-    // Dispatch Welcome & Admin emails via Resend
-    sendVendorWelcomeEmail(newUser.name, newVen.companyName, newUser.email).catch(console.error);
+    // Create companion partner registration entry
+    const regId = `reg-${Date.now()}`;
+    const registrationEntry = {
+      id: regId,
+      name: newUser.name,
+      companyName: newVen.companyName,
+      mobile: newUser.mobile || "",
+      email: emailLower,
+      products: "Standard Vendor Offering",
+      description: "Registered via Solution Provider Signup Form",
+      createdAt: newUser.createdAt,
+      status: "Pending",
+      source: "SolutionProviderSignup",
+      userId: newUser.id
+    };
+
+    if (!db.partnerRegistrations) {
+      db.partnerRegistrations = [];
+    }
+    db.partnerRegistrations.push(registrationEntry);
+
+    if (pgPool) {
+      try {
+        await pgPool.query(
+          `INSERT INTO partner_registrations (id, name, "companyName", mobile, email, products, description, "createdAt", status, source, "userId")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [
+            registrationEntry.id,
+            registrationEntry.name,
+            registrationEntry.companyName,
+            registrationEntry.mobile,
+            registrationEntry.email,
+            registrationEntry.products,
+            registrationEntry.description,
+            registrationEntry.createdAt,
+            registrationEntry.status,
+            registrationEntry.source,
+            registrationEntry.userId
+          ]
+        );
+      } catch (err) {
+        console.error("Error saving signup partner registration to Postgres:", err);
+      }
+    }
+
+    // Branded confirmation email to vendor
+    const vendorEmailHtml = getEmailTemplate(
+      "Thank you for Registering as a BANTConfirm Partner",
+      `
+        <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Thank you for your interest!</h1>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6;">Dear <strong>${newUser.name}</strong>,</p>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6;">Your registration has been received successfully. We are excited about your interest in becoming a BANTConfirm Certified Partner.</p>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6;">Our team will review your details shortly. A BANTConfirm representative will contact you to complete the next steps.</p>
+
+        <div class="card" style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 18px; margin: 20px 0; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+          <h3 style="margin-top: 0; color: #0f172a; font-size: 14px; font-weight: 700; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">Your Partner Application Details</h3>
+          <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Company Name:</strong> ${newVen.companyName}</p>
+          <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Representative:</strong> ${newUser.name}</p>
+          <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Mobile:</strong> ${newUser.mobile || "N/A"}</p>
+          <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Email Address:</strong> ${emailLower}</p>
+          <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Source:</strong> Solution Provider Signup</p>
+        </div>
+
+        <p style="font-size: 13px; color: #475569;">Support Details: <a href="mailto:support@bantconfirm.com">support@bantconfirm.com</a> | Phone Helpline: +91 120 4000 000</p>
+      `,
+      "Visit BANTConfirm Portal",
+      "https://bantconfirm.com"
+    );
+    sendResendEmail(emailLower, "Thank you for Registering as a BANTConfirm Partner", vendorEmailHtml).catch(console.error);
+
+    // Send alert to Admin
     sendVendorRegisterAdminAlert(newVen).catch(console.error);
+
+    // Admin Notification
+    if (!db.notifications) db.notifications = [];
+    const notifId = `notif-${Date.now()}`;
+    const notif = {
+      id: notifId,
+      userId: "admin",
+      title: "New Vendor Signup Pipeline",
+      message: `New vendor signup received from ${newUser.name} (${newVen.companyName}) [${emailLower}]. Added to review queue.`,
+      read: false,
+      createdAt: newUser.createdAt
+    };
+    db.notifications.unshift(notif);
+
+    if (pgPool) {
+      try {
+        await pgPool.query(
+          `INSERT INTO notifications (id, title, message, type, read, createdAt)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [notif.id, notif.title, notif.message, "Alert", notif.read, notif.createdAt]
+        );
+      } catch (err) {
+        console.error("Error saving notification to Postgres:", err);
+      }
+    }
   } else if (assignedRole === "buyer") {
     // Dispatch Buyer Welcome email via Resend
     sendBuyerWelcomeEmail(newUser.name, newUser.email).catch(console.error);
@@ -5495,6 +5741,323 @@ async function startServer() {
 </urlset>`;
 
     res.send(sitemapXml);
+  });
+
+  // ==========================================
+  // ADMIN PARTNER REGISTRATION API ENDPOINTS
+  // ==========================================
+
+  // 1. Get all Partner Registrations
+  app.get("/api/admin/partner-registrations", async (req, res) => {
+    if (pgPool) {
+      try {
+        const q = await pgPool.query("SELECT * FROM partner_registrations ORDER BY \"createdAt\" DESC");
+        return res.json(q.rows);
+      } catch (err) {
+        console.error("Failed to fetch partner registrations from PostgreSQL:", err);
+      }
+    }
+    if (!db.partnerRegistrations) {
+      db.partnerRegistrations = [];
+    }
+    res.json([...db.partnerRegistrations].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+  });
+
+  // 2. Update status of a Partner Registration
+  app.put("/api/admin/partner-registrations/:id/status", async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["Pending", "Contacted", "Under Review", "Approved", "Rejected"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status value" });
+    }
+
+    let found = false;
+    if (db.partnerRegistrations) {
+      db.partnerRegistrations = db.partnerRegistrations.map((r: any) => {
+        if (r.id === id) {
+          found = true;
+          return { ...r, status };
+        }
+        return r;
+      });
+    }
+
+    if (pgPool) {
+      try {
+        const result = await pgPool.query(
+          "UPDATE partner_registrations SET status = $1 WHERE id = $2 RETURNING *",
+          [status, id]
+        );
+        if (result.rows.length > 0) {
+          found = true;
+        }
+      } catch (err) {
+        console.error("Failed to update partner registration status in PostgreSQL:", err);
+      }
+    }
+
+    if (!found) {
+      return res.status(404).json({ error: "Partner registration not found" });
+    }
+
+    saveDb();
+    res.json({ success: true, status });
+  });
+
+  // 3. Reject partner registration
+  app.post("/api/admin/partner-registrations/:id/reject", async (req, res) => {
+    const { id } = req.params;
+    let foundReg: any = null;
+
+    if (db.partnerRegistrations) {
+      db.partnerRegistrations = db.partnerRegistrations.map((r: any) => {
+        if (r.id === id) {
+          foundReg = { ...r, status: "Rejected" };
+          return foundReg;
+        }
+        return r;
+      });
+    }
+
+    if (pgPool) {
+      try {
+        const result = await pgPool.query(
+          "UPDATE partner_registrations SET status = 'Rejected' WHERE id = $1 RETURNING *",
+          [id]
+        );
+        if (result.rows.length > 0) {
+          foundReg = result.rows[0];
+        }
+      } catch (err) {
+        console.error("Failed to reject partner registration in PostgreSQL:", err);
+      }
+    }
+
+    if (!foundReg) {
+      return res.status(404).json({ error: "Partner registration not found" });
+    }
+
+    saveDb();
+    res.json({ success: true, registration: foundReg });
+  });
+
+  // 4. Contact vendor (Set status to 'Contacted')
+  app.post("/api/admin/partner-registrations/:id/contact", async (req, res) => {
+    const { id } = req.params;
+    let foundReg: any = null;
+
+    if (db.partnerRegistrations) {
+      db.partnerRegistrations = db.partnerRegistrations.map((r: any) => {
+        if (r.id === id) {
+          foundReg = { ...r, status: "Contacted" };
+          return foundReg;
+        }
+        return r;
+      });
+    }
+
+    if (pgPool) {
+      try {
+        const result = await pgPool.query(
+          "UPDATE partner_registrations SET status = 'Contacted' WHERE id = $1 RETURNING *",
+          [id]
+        );
+        if (result.rows.length > 0) {
+          foundReg = result.rows[0];
+        }
+      } catch (err) {
+        console.error("Failed to update status to Contacted in PostgreSQL:", err);
+      }
+    }
+
+    if (!foundReg) {
+      return res.status(404).json({ error: "Partner registration not found" });
+    }
+
+    saveDb();
+    res.json({ success: true, registration: foundReg });
+  });
+
+  // 5. Approve and Convert partner registration to active vendor/user
+  app.post("/api/admin/partner-registrations/:id/approve", async (req, res) => {
+    const { id } = req.params;
+    let registration: any = null;
+
+    if (db.partnerRegistrations) {
+      registration = db.partnerRegistrations.find((r: any) => r.id === id);
+    }
+
+    if (pgPool) {
+      try {
+        const resReg = await pgPool.query("SELECT * FROM partner_registrations WHERE id = $1", [id]);
+        if (resReg.rows.length > 0) {
+          registration = resReg.rows[0];
+        }
+      } catch (err) {
+        console.error("Failed to query partner registration for approval:", err);
+      }
+    }
+
+    if (!registration) {
+      return res.status(404).json({ error: "Partner registration not found" });
+    }
+
+    const emailLower = registration.email ? registration.email.trim().toLowerCase() : "";
+
+    // 1. Check if user already exists
+    let companionUser = db.users.find((u: any) => u.email && u.email.trim().toLowerCase() === emailLower);
+    if (pgPool) {
+      try {
+        const resUser = await pgPool.query("SELECT * FROM profiles WHERE LOWER(email) = $1 LIMIT 1", [emailLower]);
+        if (resUser.rows.length > 0) {
+          companionUser = resUser.rows[0];
+        }
+      } catch (err) {
+        console.error("Failed to query user for registration approval:", err);
+      }
+    }
+
+    let vendorId = companionUser ? (companionUser.vendorId || `ven-${Date.now()}`) : `ven-${Date.now()}`;
+    let userId = companionUser ? companionUser.id : `user-${Date.now()}`;
+    let password = "PartnerTempPass123!"; // generate friendly temp password for login
+
+    // Create User if doesn't exist, else activate it
+    if (!companionUser) {
+      companionUser = {
+        id: userId,
+        name: registration.name,
+        email: emailLower,
+        companyName: registration.companyName,
+        mobile: registration.mobile || "",
+        city: "Mumbai",
+        gstNumber: "27AAAAA1111A1Z1",
+        businessType: "Solution Provider",
+        role: "vendor",
+        vendorId: vendorId,
+        createdAt: new Date().toISOString()
+      };
+      db.users.push(companionUser);
+      await resilientInsertProfile(companionUser);
+    } else {
+      // If the companion user exists, ensure they are linked to correct vendorId
+      userId = companionUser.id;
+      companionUser.role = "vendor";
+      if (!companionUser.vendorId) {
+        companionUser.vendorId = vendorId;
+      }
+      // Update profile
+      await resilientInsertProfile(companionUser);
+    }
+
+    // 2. Create or Activate Vendor profile
+    let activeVendor = db.vendors.find((v: any) => v.id === vendorId || (v.name && v.name.toLowerCase() === registration.name.toLowerCase()) || (v.companyName && v.companyName.toLowerCase() === registration.companyName.toLowerCase()));
+    if (!activeVendor && pgPool) {
+      try {
+        const resVen = await pgPool.query("SELECT * FROM vendors WHERE id = $1 LIMIT 1", [vendorId]);
+        if (resVen.rows.length > 0) {
+          activeVendor = resVen.rows[0];
+        }
+      } catch (err) {
+        console.error("Failed to query vendor for registration approval:", err);
+      }
+    }
+
+    if (!activeVendor) {
+      activeVendor = {
+        id: vendorId,
+        companyName: registration.companyName,
+        name: registration.name,
+        logo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=120&auto=format&fit=crop&q=60",
+        gstNumber: "27AAAAA1111A1Z1",
+        panNumber: "ABCDE1234F",
+        website: "https://mycompany.co.in",
+        businessCategory: "SaaS Software Vendor",
+        productsOffered: registration.products ? [registration.products] : [],
+        rating: 5.0,
+        location: "India",
+        approved: true,
+        docVerified: true,
+        plan: "Free",
+        productsCount: 0,
+        leadsCount: 0,
+        revenue: 0,
+        viewsCount: 0,
+        description: registration.description || "Certified BANTConfirm Solution Provider Partner.",
+        createdAt: new Date().toISOString()
+      } as any;
+      db.vendors.push(activeVendor);
+    } else {
+      activeVendor.approved = true;
+      activeVendor.docVerified = true;
+      if (registration.products && !activeVendor.productsOffered.includes(registration.products)) {
+        activeVendor.productsOffered.push(registration.products);
+      }
+    }
+
+    if (pgPool) {
+      try {
+        await pgPool.query(
+          `INSERT INTO vendors (id, companyName, name, logo, gstNumber, panNumber, website, businessCategory, productsOffered, rating, location, approved, docVerified, plan, productsCount, leadsCount, revenue, viewsCount, createdAt)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+           ON CONFLICT (id) DO UPDATE SET approved = true, "docVerified" = true`,
+          [activeVendor.id, activeVendor.companyName, activeVendor.name, activeVendor.logo, activeVendor.gstNumber, activeVendor.panNumber, activeVendor.website, activeVendor.businessCategory, JSON.stringify(activeVendor.productsOffered), activeVendor.rating, activeVendor.location, activeVendor.approved, activeVendor.docVerified, activeVendor.plan, activeVendor.productsCount, activeVendor.leadsCount, activeVendor.revenue, activeVendor.viewsCount, activeVendor.createdAt]
+        );
+      } catch (err) {
+        console.error("Failed to upsert approved vendor in PostgreSQL:", err);
+      }
+    }
+
+    // 3. Update Partner Registration status to Approved and link userId
+    registration.status = "Approved";
+    registration.userId = userId;
+
+    if (db.partnerRegistrations) {
+      db.partnerRegistrations = db.partnerRegistrations.map((r: any) =>
+        r.id === id ? { ...r, status: "Approved", userId } : r
+      );
+    }
+
+    if (pgPool) {
+      try {
+        await pgPool.query(
+          "UPDATE partner_registrations SET status = 'Approved', \"userId\" = $1 WHERE id = $2",
+          [userId, id]
+        );
+      } catch (err) {
+        console.error("Failed to update status of partner registration to Approved in PostgreSQL:", err);
+      }
+    }
+
+    // Dispatch Welcome/Approval Onboarding Email with Credentials
+    sendVendorWelcomeEmail(companionUser.name, companionUser.companyName, companionUser.email, password).catch(console.error);
+
+    // Notify Vendor via System Notifications
+    if (!db.notifications) db.notifications = [];
+    const notif = {
+      id: `notif-${Date.now()}`,
+      userId: userId,
+      title: "Account Approved!",
+      message: "Your technology partner application has been approved. You are now a certified BANTConfirm vendor.",
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    db.notifications.unshift(notif);
+
+    if (pgPool) {
+      try {
+        await pgPool.query(
+          `INSERT INTO notifications (id, title, message, type, read, createdAt)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [notif.id, notif.title, notif.message, "Alert", notif.read, notif.createdAt]
+        );
+      } catch (err) {
+        console.error("Failed to save approved notification to PostgreSQL:", err);
+      }
+    }
+
+    saveDb();
+    res.json({ success: true, registration, vendor: activeVendor, user: companionUser });
   });
 
   // Serve robots.txt

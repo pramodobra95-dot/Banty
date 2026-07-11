@@ -79,6 +79,108 @@ export default function AdminPanel({
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'products' | 'leads' | 'banners' | 'blogs' | 'cms' | 'users' | 'categories' | 'trusted-vendors' | 'marketing-banners' | 'admin-bot' | 'resend-emails'>('overview');
 
+  // Partner / Vendor Registrations Pipeline State
+  const [partnerRegistrations, setPartnerRegistrations] = useState<any[]>([]);
+  const [isRegistrationsLoading, setIsRegistrationsLoading] = useState(false);
+  const [vendorSubTab, setVendorSubTab] = useState<'active' | 'pipeline'>('active');
+
+  const fetchPartnerRegistrations = async () => {
+    setIsRegistrationsLoading(true);
+    try {
+      const res = await fetch("/api/admin/partner-registrations");
+      if (res.ok) {
+        const data = await res.json();
+        setPartnerRegistrations(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch partner registrations:", err);
+    } finally {
+      setIsRegistrationsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'vendors') {
+      fetchPartnerRegistrations();
+    }
+  }, [activeTab]);
+
+  const handleUpdateRegistrationStatus = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`/api/admin/partner-registrations/${id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        safeAlert(`Status updated successfully to ${status}!`, "success");
+        fetchPartnerRegistrations();
+        if (onRefreshData) onRefreshData();
+      } else {
+        const data = await res.json();
+        safeAlert(`Failed: ${data.error || "Could not update status"}`, "error");
+      }
+    } catch (err) {
+      console.error(err);
+      safeAlert("Network error.", "error");
+    }
+  };
+
+  const handleRejectRegistration = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/partner-registrations/${id}/reject`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        safeAlert("Partner registration marked as Rejected.", "success");
+        fetchPartnerRegistrations();
+        if (onRefreshData) onRefreshData();
+      } else {
+        safeAlert("Failed to reject registration.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      safeAlert("Network error.", "error");
+    }
+  };
+
+  const handleContactRegistration = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/partner-registrations/${id}/contact`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        safeAlert("Status marked as 'Contacted' successfully.", "success");
+        fetchPartnerRegistrations();
+        if (onRefreshData) onRefreshData();
+      } else {
+        safeAlert("Failed to update status to contacted.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      safeAlert("Network error.", "error");
+    }
+  };
+
+  const handleApproveRegistration = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/partner-registrations/${id}/approve`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        safeAlert("Partner registration approved and converted into an Active Vendor successfully!", "success");
+        fetchPartnerRegistrations();
+        if (onRefreshData) onRefreshData();
+      } else {
+        const data = await res.json();
+        safeAlert(`Failed: ${data.error || "Could not approve partner"}`, "error");
+      }
+    } catch (err) {
+      console.error(err);
+      safeAlert("Network error.", "error");
+    }
+  };
+
   // Resend Logs state
   const [resendLogs, setResendLogs] = useState<any[]>([]);
   const [isLogsLoading, setIsLogsLoading] = useState(false);
@@ -1295,6 +1397,14 @@ export default function AdminPanel({
             <span className="text-sm">🤖</span> Admin Bot
           </button>
           <button
+            onClick={() => setActiveTab('vendors')}
+            className={`px-3 py-2 rounded-md cursor-pointer transition-all shrink-0 ${
+              activeTab === 'vendors' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Vendors ({vendors.length})
+          </button>
+          <button
             onClick={() => setActiveTab('products')}
             className={`px-3 py-2 rounded-md cursor-pointer transition-all shrink-0 ${
               activeTab === 'products' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
@@ -1643,7 +1753,33 @@ export default function AdminPanel({
       {/* 2. VENDORS & USERS MANAGEMENT TAB */}
       {activeTab === 'vendors' && (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white rounded-xl border border-slate-200 p-5 shadow-xs gap-4">
+          {/* Sub Tab Navigation inside Vendors */}
+          <div className="flex border-b border-slate-200 gap-4 mb-2">
+            <button
+              onClick={() => setVendorSubTab('active')}
+              className={`pb-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                vendorSubTab === 'active'
+                  ? 'border-blue-600 text-blue-600 font-black'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Active Certified Vendors ({vendors.length})
+            </button>
+            <button
+              onClick={() => setVendorSubTab('pipeline')}
+              className={`pb-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                vendorSubTab === 'pipeline'
+                  ? 'border-blue-600 text-blue-600 font-black'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Vendor / Partner Registrations ({partnerRegistrations.length})
+            </button>
+          </div>
+
+          {vendorSubTab === 'active' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white rounded-xl border border-slate-200 p-5 shadow-xs gap-4">
             <div>
               <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">Solution Integrators / Vendors</h3>
               <p className="text-xs text-slate-500 mt-1">Add manual entries, verify registrations, upgrade plan tiers or delete vendor profiles.</p>
@@ -2145,6 +2281,127 @@ export default function AdminPanel({
               </table>
             </div>
           </div>
+          </div>
+          )}
+
+          {vendorSubTab === 'pipeline' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 shadow-sm">
+                <div>
+                  <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">Vendor / Partner Registrations Pipeline</h3>
+                  <p className="text-xs text-slate-500 mt-1">Review applicant files, establish direct contact, update pipeline status, or approve/convert into live verified Vendor accounts.</p>
+                </div>
+
+                {isRegistrationsLoading ? (
+                  <div className="text-center py-10 text-xs text-slate-500 font-semibold">
+                    Loading registrations pipeline...
+                  </div>
+                ) : partnerRegistrations.length === 0 ? (
+                  <div className="text-center py-10 text-xs text-slate-400 font-medium bg-slate-50 rounded-lg border border-dashed">
+                    No registrations in the pipeline yet.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-600 border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+                          <th className="p-3">Company Name / Contact</th>
+                          <th className="p-3">Email / Mobile</th>
+                          <th className="p-3">Products / Services</th>
+                          <th className="p-3">Company Description</th>
+                          <th className="p-3">Registration Date</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3">Process Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {partnerRegistrations.map((reg) => (
+                          <tr key={reg.id} className="hover:bg-slate-50/50 transition-all align-top">
+                            <td className="p-3">
+                              <p className="font-black text-slate-900 text-sm">{reg.companyName}</p>
+                              <p className="text-[10px] text-slate-500 font-medium">Rep: <strong className="text-slate-700">{reg.name}</strong></p>
+                              <span className={`inline-block mt-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                                reg.source === 'SolutionProviderSignup'
+                                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                                  : 'bg-blue-100 text-blue-700 border border-blue-200'
+                              }`}>
+                                {reg.source === 'SolutionProviderSignup' ? 'Vendor Signup' : 'Become Certified Partner'}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <p className="font-mono text-slate-700 font-bold">{reg.email}</p>
+                              <p className="font-mono text-slate-500 text-[10px]">{reg.mobile || "N/A"}</p>
+                            </td>
+                            <td className="p-3 font-medium text-slate-700 max-w-xs truncate" title={reg.products}>
+                              {reg.products || "N/A"}
+                            </td>
+                            <td className="p-3 text-slate-500 max-w-xs" title={reg.description}>
+                              <p className="line-clamp-2 leading-relaxed">{reg.description || "N/A"}</p>
+                            </td>
+                            <td className="p-3 text-slate-400 text-[10px] font-medium whitespace-nowrap">
+                              {reg.createdAt ? new Date(reg.createdAt).toLocaleString() : "N/A"}
+                            </td>
+                            <td className="p-3">
+                              <div className="space-y-1.5">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                                  reg.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                                  reg.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                  reg.status === 'Contacted' ? 'bg-indigo-100 text-indigo-700' :
+                                  reg.status === 'Under Review' ? 'bg-amber-100 text-amber-700' :
+                                  'bg-yellow-100 text-yellow-700 animate-pulse'
+                                }`}>
+                                  {reg.status || 'Pending'}
+                                </span>
+                                <select
+                                  value={reg.status || 'Pending'}
+                                  onChange={(e) => handleUpdateRegistrationStatus(reg.id, e.target.value)}
+                                  className="block w-full bg-slate-50 border border-slate-200 rounded p-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold"
+                                >
+                                  <option value="Pending">Pending</option>
+                                  <option value="Contacted">Contacted</option>
+                                  <option value="Under Review">Under Review</option>
+                                  <option value="Approved">Approved</option>
+                                  <option value="Rejected">Rejected</option>
+                                </select>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex flex-wrap gap-1.5">
+                                {reg.status !== 'Approved' && (
+                                  <button
+                                    onClick={() => handleApproveRegistration(reg.id)}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black px-2.5 py-1.5 rounded shadow-xs cursor-pointer transition-colors"
+                                  >
+                                    Approve & Convert
+                                  </button>
+                                )}
+                                {reg.status !== 'Rejected' && (
+                                  <button
+                                    onClick={() => handleRejectRegistration(reg.id)}
+                                    className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-bold px-2 py-1 rounded transition-colors cursor-pointer"
+                                  >
+                                    Reject
+                                  </button>
+                                )}
+                                {reg.status !== 'Contacted' && (
+                                  <button
+                                    onClick={() => handleContactRegistration(reg.id)}
+                                    className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold px-2 py-1 rounded transition-colors cursor-pointer"
+                                  >
+                                    Contact
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}      {/* 3. PRODUCT CATALOG VERIFICATION TAB */}
       {activeTab === 'products' && (

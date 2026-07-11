@@ -359,10 +359,10 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
                 <div className="p-3 bg-blue-950/20 rounded-lg border border-blue-900/30 space-y-1.5 text-[10px] text-slate-400">
                   <div className="flex items-center gap-1 text-blue-400 font-bold">
                     <AlertCircle className="w-3.5 h-3.5" />
-                    <span>Auto-Approval Mode</span>
+                    <span>Pending Admin Review</span>
                   </div>
                   <p className="leading-normal">
-                    Your partner account has been auto-approved for this workspace. Click the bottom button anytime to land in the product listing portal and list your software.
+                    Your registration has been received successfully and is currently in Pending status inside the Admin Panel. Our team will review your details shortly.
                   </p>
                 </div>
               </div>
@@ -376,7 +376,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
                     <div className="border-b pb-4 space-y-1.5 text-[11px] text-slate-500">
                       <div><strong className="text-slate-800">From:</strong> partner-registry@bantconfirm.com</div>
                       <div><strong className="text-slate-800">To:</strong> {email}</div>
-                      <div><strong className="text-slate-800">Subject:</strong> Partner Registry Application Received - BANTConfirm</div>
+                      <div><strong className="text-slate-800">Subject:</strong> Thank you for Registering as a BANTConfirm Partner</div>
                       <div><strong className="text-slate-800">Date:</strong> {new Date().toUTCString()}</div>
                     </div>
 
@@ -390,7 +390,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
                       <p>Dear <strong className="text-slate-900">{name}</strong>,</p>
                       
                       <p>
-                        Thank you for registering your enterprise offering on BANTConfirm. This email confirms that we have successfully received your partnership profile details for <strong className="text-slate-900">{companyName}</strong>.
+                        Thank you for your interest. Your registration has been received successfully. Our team will review your details and a BANTConfirm representative will contact you shortly.
                       </p>
 
                       <div className="bg-slate-50 p-3 rounded border space-y-1">
@@ -402,13 +402,13 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
                       </div>
 
                       <p className="leading-relaxed">
-                        Our compliance algorithms have verified your email domain and company details. Your account has been provisioned with standard free partner status so you can proceed to the catalog listings immediately.
+                        Our team is dedicated to verifying the accuracy and trust parameters of our tech network. A confirmation email copy has been dispatched to your corporate inbox.
                       </p>
 
                       <p className="text-slate-500 pt-4 border-t">
                         Sincerely,<br />
-                        <strong>BANTConfirm Partner Onboarding Desk</strong><br />
-                        <span className="text-[10px]">Marketplace Alliance Hub, India</span>
+                        <strong>BANTConfirm Partner Support Desk</strong><br />
+                        <span className="text-[10px]">Marketplace Alliance Hub, India | support@bantconfirm.com</span>
                       </p>
                     </div>
                   </div>
