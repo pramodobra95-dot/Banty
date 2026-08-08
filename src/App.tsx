@@ -22,6 +22,7 @@ const SEOViewer = lazy(() => import("./components/SEOViewer"));
 const ResetPasswordView = lazy(() => import("./components/ResetPasswordView").then(m => ({ default: m.ResetPasswordView })));
 const SourcingLandingPage = lazy(() => import("./components/SourcingLandingPage"));
 const SourcingCompetitorsView = lazy(() => import("./components/SourcingCompetitorsView"));
+const VendorDetailPage = lazy(() => import("./components/VendorDetailPage"));
 
 // Lazy load new SPA pages
 const LoginPage = lazy(() => import("./components/LoginPage"));
@@ -282,7 +283,8 @@ export default function App() {
   const getActiveTabFromPath = (path: string): string => {
     const p = path.toLowerCase().replace(/\/$/, "");
     if (p === "") return "home";
-    if (p.startsWith("/products/")) return "product-detail";
+    if (p.startsWith("/products/") || p.startsWith("/product/")) return "product-detail";
+    if (p.startsWith("/vendor/") && p !== "/vendors") return "vendor-detail";
     if (p.startsWith("/category/") || p.startsWith("/categories/")) return "category";
     if (p === "/products") return "products";
     if (p === "/about") return "about";
@@ -1590,6 +1592,52 @@ export default function App() {
           } else if (payload.eventType === "DELETE") {
             const deletedId = payload.old.id;
             setRegisteredUsers((prev) => prev.filter((u) => u.id !== deletedId));
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        (payload: any) => {
+          console.log("Realtime Products change received:", payload);
+          if (payload.eventType === "INSERT") {
+            const newProd = payload.new;
+            setProducts((prev) => {
+              if (prev.some((p) => p.id === newProd.id)) return prev;
+              return [newProd, ...prev];
+            });
+            safeAlert(`New Product Published: "${newProd.name}"`, "success");
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new;
+            setProducts((prev) =>
+              prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
+            );
+          } else if (payload.eventType === "DELETE") {
+            const deletedId = payload.old.id;
+            setProducts((prev) => prev.filter((p) => p.id !== deletedId));
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "vendors" },
+        (payload: any) => {
+          console.log("Realtime Vendors change received:", payload);
+          if (payload.eventType === "INSERT") {
+            const newVen = payload.new;
+            setVendors((prev) => {
+              if (prev.some((v) => v.id === newVen.id)) return prev;
+              return [newVen, ...prev];
+            });
+            safeAlert(`New Vendor Registered: "${newVen.companyName}"`, "success");
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new;
+            setVendors((prev) =>
+              prev.map((v) => (v.id === updated.id ? { ...v, ...updated } : v))
+            );
+          } else if (payload.eventType === "DELETE") {
+            const deletedId = payload.old.id;
+            setVendors((prev) => prev.filter((v) => v.id !== deletedId));
           }
         }
       )
@@ -3253,6 +3301,24 @@ export default function App() {
                     setSelectedBlog(blog);
                     setActiveTab("blogs");
                   }}
+                />
+              </motion.div>
+            )}
+
+            {/* Vendor Company Detail view */}
+            {activeTab === 'vendor-detail' && (
+              <motion.div
+                key="vendor-detail"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
+              >
+                <VendorDetailPage
+                  vendors={vendors}
+                  products={products}
+                  onPostLead={handlePostLead}
+                  currentUser={currentUser}
                 />
               </motion.div>
             )}

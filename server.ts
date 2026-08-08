@@ -889,6 +889,7 @@ let db: {
   trustedVendors: any[];
   marketingBanners: any[];
   partnerRegistrations?: any[];
+  vendor_registrations?: any[];
   reviews?: any[];
   resetTokens?: Record<string, any>;
   resendLogs?: any[];
@@ -912,6 +913,7 @@ let db: {
   trustedVendors: defaultTrustedVendors,
   marketingBanners: defaultMarketingBanners,
   partnerRegistrations: [],
+  vendor_registrations: [],
   resendLogs: []
 };
 
@@ -926,6 +928,9 @@ function loadDb() {
       }
       if (!db.partnerRegistrations) {
         db.partnerRegistrations = [];
+      }
+      if (!db.vendor_registrations) {
+        db.vendor_registrations = [];
       }
       if (!db.users) {
         db.users = defaultUsers;
@@ -1433,6 +1438,22 @@ async function initPostgres() {
       )
     `);
 
+    // 14b. Create vendor_registrations table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS vendor_registrations (
+        id VARCHAR(100) PRIMARY KEY,
+        full_name VARCHAR(100) NOT NULL,
+        company_name VARCHAR(200) NOT NULL,
+        mobile VARCHAR(50),
+        email VARCHAR(100) NOT NULL,
+        products TEXT,
+        description TEXT,
+        status VARCHAR(50) DEFAULT 'Pending',
+        email_verified BOOLEAN DEFAULT false,
+        created_at VARCHAR(100) NOT NULL
+      )
+    `);
+
     // Ensure leads table has title and city columns
     try {
       await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS title VARCHAR(200)");
@@ -1447,6 +1468,22 @@ async function initPostgres() {
       await client.query("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS provider VARCHAR(100)");
     } catch (err) {
       console.warn("Could not alter profiles table to add avatar and provider:", err);
+    }
+
+    // Ensure partner_registrations has notes and documents columns
+    try {
+      await client.query("ALTER TABLE partner_registrations ADD COLUMN IF NOT EXISTS notes TEXT");
+      await client.query("ALTER TABLE partner_registrations ADD COLUMN IF NOT EXISTS documents TEXT");
+    } catch (err) {
+      console.warn("Could not alter partner_registrations to add notes and documents:", err);
+    }
+
+    // Ensure vendor_registrations has notes and documents columns
+    try {
+      await client.query("ALTER TABLE vendor_registrations ADD COLUMN IF NOT EXISTS notes TEXT");
+      await client.query("ALTER TABLE vendor_registrations ADD COLUMN IF NOT EXISTS documents TEXT");
+    } catch (err) {
+      console.warn("Could not alter vendor_registrations to add notes and documents:", err);
     }
 
     console.log("PostgreSQL tables checked/created.");
@@ -1468,7 +1505,8 @@ async function initPostgres() {
         "profiles",
         "trusted_vendors",
         "marketing_banners",
-        "partner_registrations"
+        "partner_registrations",
+        "vendor_registrations"
       ];
       for (const table of rlsTables) {
         await client.query(`ALTER TABLE IF EXISTS public.${table} DISABLE ROW LEVEL SECURITY`).catch(() => {});
@@ -2111,6 +2149,67 @@ const sendBuyerWelcomeEmail = async (name: string, email: string) => {
   await sendResendEmail(email, "Welcome to BANTConfirm", html);
 };
 
+// Branded HTML welcome email template matching official BANTConfirm branding
+const sendBantConfirmWelcomeEmail = async (name: string, companyName: string, email: string) => {
+  const bodyHtml = `
+    <h1 style="color: #0066FF; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Welcome to BANTConfirm Partner Network!</h1>
+    <p style="color: #475569; font-size: 14px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+    <p style="color: #475569; font-size: 14px; line-height: 1.6;">Thank you for choosing BANTConfirm.</p>
+    <p style="color: #475569; font-size: 14px; line-height: 1.6;">Your registration has been received successfully. Our team will review your profile shortly.</p>
+
+    <div class="card" style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 20px; margin: 20px 0; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+      <h3 style="margin-top: 0; color: #0066FF; font-size: 15px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 12px;">✔ Partner Benefits & Core Features</h3>
+      <div style="font-size: 13px; line-height: 1.6; color: #334155;">
+        <div style="margin-bottom: 8px;">✔ <strong>No Upfront Registration Fee</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>No Annual Listing Charges</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>Performance-Based Revenue Model</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>Pay Commission Only After Successful Deal Closure</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>Access to Verified Enterprise Buyers</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>Nationwide Business Opportunities</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>Dedicated Vendor Dashboard</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>AI-powered Lead Matching</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>Real-Time Enquiry Notifications</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>Product Showcase on BANTConfirm Marketplace</strong></div>
+      </div>
+    </div>
+
+    <div class="card" style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 20px; margin: 20px 0; border-radius: 12px;">
+      <h3 style="margin-top: 0; color: #b45309; font-size: 15px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #fef3c7; padding-bottom: 8px; margin-bottom: 12px;">💰 Transparent Payment Model</h3>
+      <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
+        We <strong>DO NOT</strong> charge any upfront payment.<br/>
+        You only pay a pre-agreed commission after a successful closed deal.<br/>
+        <strong>No Deal = No Commission.</strong>
+      </p>
+    </div>
+
+    <div class="card" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; margin: 20px 0; border-radius: 12px;">
+      <h3 style="margin-top: 0; color: #16a34a; font-size: 15px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #bbf7d0; padding-bottom: 8px; margin-bottom: 12px;">🚀 Next Steps in Your Onboarding Journey</h3>
+      <div style="font-size: 13px; line-height: 1.6; color: #334155;">
+        <ol style="margin: 0; padding-left: 20px;">
+          <li style="margin-bottom: 6px;"><strong>Profile Review:</strong> Our administrative team pre-screens your company registry details.</li>
+          <li style="margin-bottom: 6px;"><strong>Verification:</strong> We confirm your GSTIN, corporate identity, and service focus area.</li>
+          <li style="margin-bottom: 6px;"><strong>Approval:</strong> Your BANTConfirm seller portal is approved and credentials dispatched.</li>
+          <li style="margin-bottom: 6px;"><strong>Product Publishing:</strong> Upload and list your product portfolio onto our search index.</li>
+          <li style="margin-bottom: 6px;"><strong>Start Sourcing:</strong> Instantly start receiving matching, qualified sales enquiries!</li>
+        </ol>
+      </div>
+    </div>
+
+    <p style="font-size: 13.5px; color: #475569; line-height: 1.6;">
+      Should you have any questions or require custom assistance, reply directly to this mail or contact our onboarding helpdesk at <strong>support@bantconfirm.com</strong>.
+    </p>
+  `;
+
+  const html = getEmailTemplate(
+    "Welcome to the BANTConfirm Partner Network",
+    bodyHtml,
+    "Login Dashboard",
+    "https://www.bantconfirm.com/login"
+  );
+
+  await sendResendEmail(email, "Welcome to BANTConfirm Partner Network", html);
+};
+
 // Welcome email for Vendors (supports optional temporary password for manual onboarding)
 const sendVendorWelcomeEmail = async (name: string, companyName: string, email: string, password?: string) => {
   let credentialsBlock = "";
@@ -2687,6 +2786,24 @@ app.post("/api/auth/register-partner", async (req, res) => {
     db.partnerRegistrations.push(registrationEntry);
   }
 
+  // Update memory vendor_registrations
+  if (!db.vendor_registrations) {
+    db.vendor_registrations = [];
+  }
+  const vendorRegEntry = {
+    id: registrationEntry.id,
+    full_name: registrationEntry.name,
+    company_name: registrationEntry.companyName,
+    mobile: registrationEntry.mobile,
+    email: registrationEntry.email,
+    products: registrationEntry.products,
+    description: registrationEntry.description,
+    status: "Pending",
+    email_verified: false,
+    created_at: registrationEntry.createdAt
+  };
+  db.vendor_registrations.push(vendorRegEntry);
+
   // Update PostgreSQL
   if (pgPool) {
     try {
@@ -2717,6 +2834,34 @@ app.post("/api/auth/register-partner", async (req, res) => {
       );
     } catch (err) {
       console.error("Error saving partner registration to Postgres:", err);
+    }
+
+    try {
+      await pgPool.query(
+        `INSERT INTO vendor_registrations (id, full_name, company_name, mobile, email, products, description, status, email_verified, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ON CONFLICT (id) DO UPDATE SET
+           full_name = EXCLUDED.full_name,
+           company_name = EXCLUDED.company_name,
+           mobile = EXCLUDED.mobile,
+           products = EXCLUDED.products,
+           description = EXCLUDED.description,
+           status = EXCLUDED.status`,
+        [
+          vendorRegEntry.id,
+          vendorRegEntry.full_name,
+          vendorRegEntry.company_name,
+          vendorRegEntry.mobile,
+          vendorRegEntry.email,
+          vendorRegEntry.products,
+          vendorRegEntry.description,
+          vendorRegEntry.status,
+          vendorRegEntry.email_verified,
+          vendorRegEntry.created_at
+        ]
+      );
+    } catch (err) {
+      console.error("Error saving vendor_registrations to Postgres:", err);
     }
   }
 
@@ -2749,31 +2894,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
     }
   }
 
-  // Branded confirmation email to vendor
-  const vendorEmailHtml = getEmailTemplate(
-    "Thank you for Registering as a BANTConfirm Partner",
-    `
-      <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Thank you for your interest!</h1>
-      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Dear <strong>${name}</strong>,</p>
-      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Your registration has been received successfully. We are excited about your interest in becoming a BANTConfirm Certified Partner.</p>
-      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Our team will review your details shortly. A BANTConfirm representative will contact you to complete the next steps.</p>
-
-      <div class="card" style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 18px; margin: 20px 0; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-        <h3 style="margin-top: 0; color: #0f172a; font-size: 14px; font-weight: 700; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">Your Partner Application Details</h3>
-        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Company Name:</strong> ${companyName}</p>
-        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Representative:</strong> ${name}</p>
-        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Mobile:</strong> ${mobile || "N/A"}</p>
-        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Email Address:</strong> ${emailLower}</p>
-        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>IT Solutions/Products:</strong> ${products || "N/A"}</p>
-        <p style="margin: 8px 0; color: #334155; font-size: 13px;"><strong>Company Description:</strong> ${description || "N/A"}</p>
-      </div>
-
-      <p style="font-size: 13px; color: #475569;">Support Details: <a href="mailto:support@bantconfirm.com">support@bantconfirm.com</a> | Phone Helpline: +91 120 4000 000</p>
-    `,
-    "Visit BANTConfirm Portal",
-    "https://bantconfirm.com"
-  );
-  sendResendEmail(emailLower, "Thank you for Registering as a BANTConfirm Partner", vendorEmailHtml).catch(console.error);
+  // Immediately send a branded HTML Welcome email (Subject: Welcome to BANTConfirm Partner Network)
+  sendBantConfirmWelcomeEmail(name, companyName, emailLower).catch(console.error);
 
   // Send alert to Admin
   const adminAlertHtml = getEmailTemplate(
@@ -5556,14 +5678,15 @@ function getSEOPageHtml(reqPath: string, baseHtml: string) {
 
   let config = seoConfig[p];
 
-  if (!config && p.startsWith("/products/")) {
-    const slug = p.substring("/products/".length);
+  if (!config && (p.startsWith("/products/") || p.startsWith("/product/"))) {
+    const prefix = p.startsWith("/products/") ? "/products/" : "/product/";
+    const slug = p.substring(prefix.length);
     const matched = db.products.find(prod => prod.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug || prod.id === slug);
     if (matched) {
       config = {
         title: `${matched.name} Specs, Pricing & BANT Verification | BANTConfirm`,
         description: `Compare detailed technical specs, customer reviews, and direct vendor pricing for ${matched.name} under category ${matched.category}. Verify decision authority and matching budget constraints.`,
-        canonical: `https://www.bantconfirm.com/products/${slug}`,
+        canonical: `https://www.bantconfirm.com/product/${slug}`,
         h1: matched.name,
         schema: {
           "@context": "https://schema.org",
@@ -5579,6 +5702,30 @@ function getSEOPageHtml(reqPath: string, baseHtml: string) {
             "@type": "Offer",
             "price": matched.pricing ? matched.pricing.replace(/[^0-9]/g, "") || "45000" : "45000",
             "priceCurrency": "INR"
+          }
+        }
+      };
+    }
+  }
+
+  if (!config && p.startsWith("/vendor/")) {
+    const slug = p.substring("/vendor/".length);
+    const matched = db.vendors.find(v => v.companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug || v.id.toLowerCase() === slug);
+    if (matched) {
+      config = {
+        title: `${matched.companyName} | BANT Verified Sourcing Partner, ${matched.businessCategory || "IT Vendor"}`,
+        description: `Source verified digital software portfolios, specifications, and client rating reports of ${matched.companyName} in ${matched.location || "India"}. Pre-qualify direct BANT RfQs.`,
+        canonical: `https://www.bantconfirm.com/vendor/${slug}`,
+        h1: matched.companyName,
+        schema: {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": matched.companyName,
+          "url": matched.website || `https://www.bantconfirm.com/vendor/${slug}`,
+          "logo": matched.logo || "https://www.bantconfirm.com/favicon.png",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": matched.location || "India"
           }
         }
       };
@@ -5647,7 +5794,7 @@ function resolveDistPath(): string {
 
 async function startServer() {
   // Serve dynamic Sitemap
-  app.get("/sitemap.xml", (req, res) => {
+  app.get("/sitemap.xml", async (req, res) => {
     res.header("Content-Type", "application/xml");
     
     const staticUrls = [
@@ -5709,32 +5856,86 @@ async function startServer() {
       });
     });
 
-    // Add active products from the local/Postgres database
-    if (db.products && Array.isArray(db.products)) {
-      db.products.filter(p => p.approved).forEach(p => {
-        const slug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        urlsXml += `
+    // Dynamically retrieve latest products, vendors, and blogs from database
+    let productsList = [];
+    let vendorsList = [];
+    let blogsList = [];
+
+    if (pgPool) {
+      try {
+        const prodQuery = await pgPool.query("SELECT * FROM products WHERE approved = true");
+        productsList = prodQuery.rows;
+      } catch (err) {
+        console.error("Sitemap: Failed to query products from Postgres", err);
+      }
+      try {
+        const vendQuery = await pgPool.query("SELECT * FROM vendors WHERE approved = true OR \"docVerified\" = true");
+        vendorsList = vendQuery.rows;
+      } catch (err) {
+        console.error("Sitemap: Failed to query vendors from Postgres", err);
+      }
+      try {
+        const blogQuery = await pgPool.query("SELECT * FROM blogs");
+        blogsList = blogQuery.rows;
+      } catch (err) {
+        console.error("Sitemap: Failed to query blogs from Postgres", err);
+      }
+    }
+
+    // Merge/fallback with local memory DB
+    if (productsList.length === 0 && db.products && Array.isArray(db.products)) {
+      productsList = db.products.filter(p => p.approved);
+    }
+    if (vendorsList.length === 0 && db.vendors && Array.isArray(db.vendors)) {
+      vendorsList = db.vendors.filter(v => v.approved || v.docVerified);
+    }
+    if (blogsList.length === 0 && db.blogs && Array.isArray(db.blogs)) {
+      blogsList = db.blogs;
+    }
+
+    // Add active products
+    productsList.forEach(p => {
+      const slug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+      urlsXml += `
+  <url>
+    <loc>https://www.bantconfirm.com/product/${slug}</loc>
+    <lastmod>${todayStr}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
   <url>
     <loc>https://www.bantconfirm.com/products/${slug}</loc>
     <lastmod>${todayStr}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`;
-      });
-    }
+    });
+
+    // Add active vendors
+    vendorsList.forEach(v => {
+      const company = v.companyName || v.name || "";
+      if (company) {
+        const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        urlsXml += `
+  <url>
+    <loc>https://www.bantconfirm.com/vendor/${slug}</loc>
+    <lastmod>${todayStr}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+      }
+    });
 
     // Add blog posts
-    if (db.blogs && Array.isArray(db.blogs)) {
-      db.blogs.forEach(b => {
-        urlsXml += `
+    blogsList.forEach(b => {
+      urlsXml += `
   <url>
     <loc>https://www.bantconfirm.com/blog/${b.slug || b.id}</loc>
     <lastmod>${todayStr}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`;
-      });
-    }
+    });
 
     const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urlsXml}
@@ -5763,12 +5964,12 @@ async function startServer() {
     res.json([...db.partnerRegistrations].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   });
 
-  // 2. Update status of a Partner Registration
+  // 2. Update status of a Partner Registration (extended workflow options)
   app.put("/api/admin/partner-registrations/:id/status", async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!["Pending", "Contacted", "Under Review", "Approved", "Rejected"].includes(status)) {
+    if (!["Pending", "Contacted", "Under Review", "Approved", "Rejected", "Suspended", "Changes Requested"].includes(status)) {
       return res.status(400).json({ error: "Invalid status value" });
     }
 
@@ -5783,6 +5984,16 @@ async function startServer() {
       });
     }
 
+    if (!db.vendor_registrations) {
+      db.vendor_registrations = [];
+    }
+    db.vendor_registrations = db.vendor_registrations.map((vr: any) => {
+      if (vr.id === id) {
+        return { ...vr, status };
+      }
+      return vr;
+    });
+
     if (pgPool) {
       try {
         const result = await pgPool.query(
@@ -5795,6 +6006,15 @@ async function startServer() {
       } catch (err) {
         console.error("Failed to update partner registration status in PostgreSQL:", err);
       }
+
+      try {
+        await pgPool.query(
+          "UPDATE vendor_registrations SET status = $1 WHERE id = $2",
+          [status, id]
+        );
+      } catch (err) {
+        console.error("Failed to update vendor_registrations status in PostgreSQL:", err);
+      }
     }
 
     if (!found) {
@@ -5803,6 +6023,118 @@ async function startServer() {
 
     saveDb();
     res.json({ success: true, status });
+  });
+
+  // 2b. Add Note to a Partner Registration
+  app.post("/api/admin/partner-registrations/:id/notes", async (req, res) => {
+    const { id } = req.params;
+    const { notes } = req.body;
+
+    if (!notes || !notes.trim()) {
+      return res.status(400).json({ error: "Note text is required." });
+    }
+
+    let found = false;
+    let updatedNotes = "";
+
+    if (db.partnerRegistrations) {
+      db.partnerRegistrations = db.partnerRegistrations.map((r: any) => {
+        if (r.id === id) {
+          found = true;
+          updatedNotes = (r.notes || "") + (r.notes ? "\n" : "") + notes;
+          return { ...r, notes: updatedNotes };
+        }
+        return r;
+      });
+    }
+
+    if (!db.vendor_registrations) {
+      db.vendor_registrations = [];
+    }
+    db.vendor_registrations = db.vendor_registrations.map((vr: any) => {
+      if (vr.id === id) {
+        return { ...vr, notes: updatedNotes };
+      }
+      return vr;
+    });
+
+    if (pgPool) {
+      try {
+        const q = await pgPool.query("SELECT notes FROM partner_registrations WHERE id = $1", [id]);
+        if (q.rows.length > 0) {
+          found = true;
+          const currentNotes = q.rows[0].notes || "";
+          updatedNotes = currentNotes + (currentNotes ? "\n" : "") + notes;
+          await pgPool.query(
+            "UPDATE partner_registrations SET notes = $1 WHERE id = $2",
+            [updatedNotes, id]
+          );
+        }
+      } catch (err) {
+        console.error("Failed to append note to partner_registrations in PostgreSQL:", err);
+      }
+
+      try {
+        await pgPool.query(
+          "UPDATE vendor_registrations SET notes = $1 WHERE id = $2",
+          [updatedNotes, id]
+        );
+      } catch (err) {
+        console.error("Failed to append note to vendor_registrations in PostgreSQL:", err);
+      }
+    }
+
+    if (!found) {
+      return res.status(404).json({ error: "Partner registration not found" });
+    }
+
+    saveDb();
+    res.json({ success: true, notes: updatedNotes });
+  });
+
+  // 2c. Send Custom Email to Registration Applicant
+  app.post("/api/admin/partner-registrations/:id/send-email", async (req, res) => {
+    const { id } = req.params;
+    const { subject, body } = req.body;
+
+    if (!subject || !body) {
+      return res.status(400).json({ error: "Subject and Body are required." });
+    }
+
+    let foundReg: any = null;
+    if (db.partnerRegistrations) {
+      foundReg = db.partnerRegistrations.find((r: any) => r.id === id);
+    }
+
+    if (!foundReg && pgPool) {
+      try {
+        const q = await pgPool.query("SELECT * FROM partner_registrations WHERE id = $1", [id]);
+        if (q.rows.length > 0) {
+          foundReg = q.rows[0];
+        }
+      } catch (err) {
+        console.error("Failed to query partner registration for custom email in PostgreSQL:", err);
+      }
+    }
+
+    if (!foundReg) {
+      return res.status(404).json({ error: "Partner registration not found" });
+    }
+
+    const htmlContent = getEmailTemplate(subject, `
+      <p style="color: #475569; font-size: 14px; line-height: 1.6;">Dear <strong>${foundReg.name}</strong>,</p>
+      <div style="color: #475569; font-size: 14px; line-height: 1.6; whitespace: pre-wrap;">
+        ${body.replace(/\n/g, "<br/>")}
+      </div>
+    `);
+
+    try {
+      const emailResult = await sendResendEmail(foundReg.email, subject, htmlContent);
+      res.json({ success: true, simulated: emailResult.simulated || false });
+    } catch (err: any) {
+      console.error("Failed to send custom email to registration applicant:", err);
+      res.status(500).json({ error: "Failed to dispatch email", details: err.message });
+    }
   });
 
   // 3. Reject partner registration
@@ -6113,6 +6445,32 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
         next(); // fallback to standard static/vite
       }
     });
+  });
+
+  app.get("/product/:slug", async (req, res, next) => {
+    try {
+      const templatePath = resolveIndexHtml();
+      let baseHtml = fs.readFileSync(templatePath, "utf-8");
+      const renderedHtml = getSEOPageHtml(req.path, baseHtml);
+      res.header("Content-Type", "text/html");
+      res.send(renderedHtml);
+    } catch (err) {
+      console.error("SEO Pre-render error for /product/:slug", err);
+      next();
+    }
+  });
+
+  app.get("/vendor/:slug", async (req, res, next) => {
+    try {
+      const templatePath = resolveIndexHtml();
+      let baseHtml = fs.readFileSync(templatePath, "utf-8");
+      const renderedHtml = getSEOPageHtml(req.path, baseHtml);
+      res.header("Content-Type", "text/html");
+      res.send(renderedHtml);
+    } catch (err) {
+      console.error("SEO Pre-render error for /vendor/:slug", err);
+      next();
+    }
   });
 
   if (process.env.NODE_ENV !== "production") {

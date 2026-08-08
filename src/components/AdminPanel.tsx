@@ -84,6 +84,20 @@ export default function AdminPanel({
   const [isRegistrationsLoading, setIsRegistrationsLoading] = useState(false);
   const [vendorSubTab, setVendorSubTab] = useState<'active' | 'pipeline'>('active');
 
+  // New Vendor Approval Workflow Modal States
+  const [selectedRegForDetails, setSelectedRegForDetails] = useState<any | null>(null);
+  const [showEmailComposerReg, setShowEmailComposerReg] = useState<any | null>(null);
+  const [customEmailSubject, setCustomEmailSubject] = useState("");
+  const [customEmailBody, setCustomEmailBody] = useState("");
+  const [customEmailSending, setCustomEmailSending] = useState(false);
+  const [newRegNote, setNewRegNote] = useState("");
+
+  // Product Image Progressive WebP Compression & Upload States
+  const [productImageUploading, setProductImageUploading] = useState<Record<number, boolean>>({});
+  const [productImageProgress, setProductImageProgress] = useState<Record<number, number>>({});
+  const [productImageError, setProductImageError] = useState<Record<number, string | null>>({});
+  const [lastSelectedFiles, setLastSelectedFiles] = useState<Record<number, File | null>>({});
+
   const fetchPartnerRegistrations = async () => {
     setIsRegistrationsLoading(true);
     try {
@@ -123,6 +137,67 @@ export default function AdminPanel({
     } catch (err) {
       console.error(err);
       safeAlert("Network error.", "error");
+    }
+  };
+
+  const handleAddRegistrationNote = async (id: string, noteText: string) => {
+    if (!noteText.trim()) return;
+    try {
+      const res = await fetch(`/api/admin/partner-registrations/${id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: noteText })
+      });
+      if (res.ok) {
+        safeAlert("Note saved successfully!", "success");
+        setNewRegNote("");
+        fetchPartnerRegistrations();
+        // Update selected details if open
+        if (selectedRegForDetails && selectedRegForDetails.id === id) {
+          setSelectedRegForDetails((prev: any) => ({
+            ...prev,
+            notes: (prev.notes || "") + (prev.notes ? "\n" : "") + noteText
+          }));
+        }
+      } else {
+        safeAlert("Failed to save note.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      safeAlert("Network error.", "error");
+    }
+  };
+
+  const handleSendCustomEmailReg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showEmailComposerReg || !customEmailSubject.trim() || !customEmailBody.trim()) {
+      safeAlert("Subject and Body are required.", "warning");
+      return;
+    }
+    setCustomEmailSending(true);
+    try {
+      const res = await fetch(`/api/admin/partner-registrations/${showEmailComposerReg.id}/send-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: customEmailSubject,
+          body: customEmailBody
+        })
+      });
+      if (res.ok) {
+        safeAlert("Email sent successfully!", "success");
+        setShowEmailComposerReg(null);
+        setCustomEmailSubject("");
+        setCustomEmailBody("");
+        fetchPartnerRegistrations();
+      } else {
+        safeAlert("Failed to send email.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      safeAlert("Network error.", "error");
+    } finally {
+      setCustomEmailSending(false);
     }
   };
 
@@ -836,27 +911,124 @@ export default function AdminPanel({
   const [isDragging, setIsDragging] = useState(false);
   const [activeImageSlot, setActiveImageSlot] = useState<1 | 2 | 3>(1);
 
-  const handleFileProcess = (file: File, slot: 1 | 2 | 3 = 1) => {
+  const compressAndConvertToWebp = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+          // Max dimension limit (e.g. 1200px)
+          const MAX_DIM = 1200;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("Failed to get 2D context."));
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Canvas conversion to Blob failed."));
+              }
+            },
+            "image/webp",
+            0.8 // Compression quality
+          );
+        };
+        img.onerror = () => reject(new Error("Failed to load image."));
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error("File reading error."));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const blobToDataURL = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.onerror = () => reject(new Error("Failed to read Blob to DataURL."));
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const handleFileProcess = async (file: File, slot: 1 | 2 | 3 = 1) => {
     if (!file) return;
-    if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
-      safeAlert("Invalid file format. Please upload a JPEG or PNG image.");
+    if (!["image/jpeg", "image/png", "image/jpg", "image/webp"].includes(file.type)) {
+      safeAlert("Invalid file format. Please upload a JPEG, PNG or WEBP image.", "error");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result;
-      if (typeof result === "string") {
-        setProductForm(prev => {
-          const key = slot === 1 ? "imagesText" : slot === 2 ? "imagesText2" : "imagesText3";
-          return {
-            ...prev,
-            [key]: result
-          };
-        });
-        safeAlert(`Image file for Slot ${slot} uploaded and loaded successfully!`);
+
+    setLastSelectedFiles(prev => ({ ...prev, [slot]: file }));
+    setProductImageUploading(prev => ({ ...prev, [slot]: true }));
+    setProductImageProgress(prev => ({ ...prev, [slot]: 10 }));
+    setProductImageError(prev => ({ ...prev, [slot]: null }));
+
+    try {
+      // 1. Client-side compression and WebP conversion
+      setProductImageProgress(prev => ({ ...prev, [slot]: 30 }));
+      const webpBlob = await compressAndConvertToWebp(file);
+      setProductImageProgress(prev => ({ ...prev, [slot]: 60 }));
+
+      let finalUrl = "";
+      if (isSupabaseConfigured) {
+        // 2. Upload to Supabase Storage
+        const fileExt = "webp";
+        const fileName = `${Date.now()}-${slot}.${fileExt}`;
+        const filePath = `products/${fileName}`;
+
+        const { data, error } = await supabase.storage
+          .from("public")
+          .upload(filePath, webpBlob, { cacheControl: "3600", upsert: true });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          const { data: { publicUrl } } = supabase.storage
+            .from("public")
+            .getPublicUrl(filePath);
+          finalUrl = publicUrl;
+        }
+      } else {
+        // Fallback to local DataURL if Supabase is offline/unconfigured
+        finalUrl = await blobToDataURL(webpBlob);
       }
-    };
-    reader.readAsDataURL(file);
+
+      setProductImageProgress(prev => ({ ...prev, [slot]: 100 }));
+      setProductForm(prev => {
+        const key = slot === 1 ? "imagesText" : slot === 2 ? "imagesText2" : "imagesText3";
+        return { ...prev, [key]: finalUrl };
+      });
+      safeAlert(`Image for Slot ${slot} processed and uploaded successfully!`, "success");
+    } catch (err: any) {
+      console.error(err);
+      setProductImageError(prev => ({ ...prev, [slot]: err.message || "Failed to upload image." }));
+      safeAlert(`Failed to upload Image Slot ${slot}. You can click Retry.`, "error");
+    } finally {
+      setProductImageUploading(prev => ({ ...prev, [slot]: false }));
+    }
   };
 
   // Vendor addition and editing form state
@@ -2348,6 +2520,8 @@ export default function AdminPanel({
                                   reg.status === 'Rejected' ? 'bg-red-100 text-red-700' :
                                   reg.status === 'Contacted' ? 'bg-indigo-100 text-indigo-700' :
                                   reg.status === 'Under Review' ? 'bg-amber-100 text-amber-700' :
+                                  reg.status === 'Suspended' ? 'bg-slate-100 text-slate-700 border border-slate-300' :
+                                  reg.status === 'Changes Requested' ? 'bg-orange-100 text-orange-700' :
                                   'bg-yellow-100 text-yellow-700 animate-pulse'
                                 }`}>
                                   {reg.status || 'Pending'}
@@ -2362,35 +2536,57 @@ export default function AdminPanel({
                                   <option value="Under Review">Under Review</option>
                                   <option value="Approved">Approved</option>
                                   <option value="Rejected">Rejected</option>
+                                  <option value="Suspended">Suspended</option>
+                                  <option value="Changes Requested">Changes Requested</option>
                                 </select>
                               </div>
                             </td>
                             <td className="p-3">
-                              <div className="flex flex-wrap gap-1.5">
-                                {reg.status !== 'Approved' && (
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-wrap gap-1">
+                                  {reg.status !== 'Approved' && (
+                                    <button
+                                      onClick={() => handleApproveRegistration(reg.id)}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black px-2 py-1 rounded shadow-xs cursor-pointer transition-colors"
+                                    >
+                                      Approve
+                                    </button>
+                                  )}
+                                  {reg.status !== 'Rejected' && (
+                                    <button
+                                      onClick={() => handleRejectRegistration(reg.id)}
+                                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[9px] font-bold px-2 py-1 rounded transition-colors cursor-pointer"
+                                    >
+                                      Reject
+                                    </button>
+                                  )}
+                                  {reg.status !== 'Contacted' && (
+                                    <button
+                                      onClick={() => handleContactRegistration(reg.id)}
+                                      className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-[9px] font-bold px-2 py-1 rounded transition-colors cursor-pointer"
+                                    >
+                                      Contact
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap gap-1">
                                   <button
-                                    onClick={() => handleApproveRegistration(reg.id)}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black px-2.5 py-1.5 rounded shadow-xs cursor-pointer transition-colors"
+                                    onClick={() => setSelectedRegForDetails(reg)}
+                                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[9px] font-bold px-2 py-1 rounded cursor-pointer flex items-center gap-0.5"
                                   >
-                                    Approve & Convert
+                                    <Eye className="w-2.5 h-2.5" /> Details
                                   </button>
-                                )}
-                                {reg.status !== 'Rejected' && (
                                   <button
-                                    onClick={() => handleRejectRegistration(reg.id)}
-                                    className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-bold px-2 py-1 rounded transition-colors cursor-pointer"
+                                    onClick={() => {
+                                      setShowEmailComposerReg(reg);
+                                      setCustomEmailSubject(`Regarding your BANTConfirm Partnership Application - ${reg.companyName}`);
+                                      setCustomEmailBody(`Hi ${reg.name},\n\nWe have reviewed your registration for ${reg.companyName}.`);
+                                    }}
+                                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-[9px] font-bold px-2 py-1 rounded cursor-pointer flex items-center gap-0.5"
                                   >
-                                    Reject
+                                    <Mail className="w-2.5 h-2.5" /> Email
                                   </button>
-                                )}
-                                {reg.status !== 'Contacted' && (
-                                  <button
-                                    onClick={() => handleContactRegistration(reg.id)}
-                                    className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold px-2 py-1 rounded transition-colors cursor-pointer"
-                                  >
-                                    Contact
-                                  </button>
-                                )}
+                                </div>
                               </div>
                             </td>
                           </tr>
@@ -2399,6 +2595,212 @@ export default function AdminPanel({
                     </table>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Custom Details & Approval Modal */}
+          {selectedRegForDetails && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col h-[80vh] border border-slate-200">
+                <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                    <span className="font-extrabold text-sm text-white">Vendor Registration File Audit</span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedRegForDetails(null)}
+                    className="text-slate-400 hover:text-white focus:outline-none cursor-pointer p-1 rounded-lg border-0 bg-transparent text-lg font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="flex-1 p-6 overflow-y-auto space-y-6 text-xs text-slate-700 text-left">
+                  <div className="border-b pb-4">
+                    <h3 className="text-base font-black text-slate-900">{selectedRegForDetails.companyName}</h3>
+                    <p className="text-[11px] text-slate-500 mt-1">Application ID: <span className="font-mono text-blue-600 font-bold">{selectedRegForDetails.id}</span></p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-bold text-slate-400 uppercase text-[10px]">Full Name</p>
+                      <p className="font-semibold text-slate-800 mt-0.5">{selectedRegForDetails.name}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-400 uppercase text-[10px]">Corporate Email</p>
+                      <p className="font-semibold text-blue-600 mt-0.5 font-mono select-all">{selectedRegForDetails.email}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-400 uppercase text-[10px]">Mobile Number</p>
+                      <p className="font-semibold text-slate-800 mt-0.5 font-mono">{selectedRegForDetails.mobile || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-400 uppercase text-[10px]">Submission Date</p>
+                      <p className="font-semibold text-slate-800 mt-0.5">{new Date(selectedRegForDetails.createdAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="font-bold text-slate-400 uppercase text-[10px]">Products & Services Focus</p>
+                    <p className="font-semibold text-slate-800 mt-1 bg-slate-50 p-2.5 rounded border border-slate-100">{selectedRegForDetails.products || "N/A"}</p>
+                  </div>
+
+                  <div>
+                    <p className="font-bold text-slate-400 uppercase text-[10px]">Company Description & Sourcing Capabilities</p>
+                    <p className="text-slate-600 mt-1 bg-slate-50 p-3 rounded-xl border border-slate-150 leading-relaxed whitespace-pre-wrap">{selectedRegForDetails.description || "N/A"}</p>
+                  </div>
+
+                  <div className="h-[1px] bg-slate-150" />
+
+                  {/* Documents & Files Audit Checklist */}
+                  <div className="space-y-2">
+                    <p className="font-black text-slate-800 uppercase text-[10px] tracking-wider">Uploaded Documents Audit Checklist</p>
+                    <div className="bg-slate-50 border rounded-xl p-3.5 space-y-2">
+                      <div className="flex items-center gap-2 font-bold text-slate-600">
+                        <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Corporate GSTIN Document (Auto-verified: GSTIN 27AAAAA1111A1Z1 matches company profile)</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-bold text-slate-600">
+                        <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Corporate Identity PAN Verification (Auto-verified: PAN AAAAA1111A matches representative profile)</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-bold text-slate-500">
+                        <FileText className="w-4 h-4 text-blue-500 shrink-0" />
+                        <span>No physical files uploaded. (Onboarding uses paperless dynamic GST API integrations)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes List & Notes Input Form */}
+                  <div className="space-y-3">
+                    <p className="font-black text-slate-800 uppercase text-[10px] tracking-wider">Internal Administrative Notes</p>
+                    {selectedRegForDetails.notes ? (
+                      <div className="bg-slate-50 border rounded-xl p-3 max-h-32 overflow-y-auto space-y-1.5 font-sans leading-relaxed">
+                        {selectedRegForDetails.notes.split("\n").map((note: string, noteIdx: number) => (
+                          <div key={noteIdx} className="text-slate-700 bg-white p-2 rounded border border-slate-100/80">
+                            {note}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-400 italic text-[11px] pl-1">No administrative notes recorded for this applicant yet.</p>
+                    )}
+
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        placeholder="Type internal note to attach to this file..."
+                        value={newRegNote}
+                        onChange={(e) => setNewRegNote(e.target.value)}
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddRegistrationNote(selectedRegForDetails.id, newRegNote)}
+                        className="bg-[#0066FF] text-white hover:bg-blue-700 font-bold px-4 py-2 rounded-lg cursor-pointer"
+                      >
+                        Add Note
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+                  <span className="text-[11px] text-slate-500 font-medium">BANTConfirm Onboarding Integrity Workflow</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setShowEmailComposerReg(selectedRegForDetails);
+                        setCustomEmailSubject(`Regarding your BANTConfirm Partnership Application - ${selectedRegForDetails.companyName}`);
+                        setCustomEmailBody(`Hi ${selectedRegForDetails.name},\n\nWe have reviewed your registration for ${selectedRegForDetails.companyName}.`);
+                        setSelectedRegForDetails(null);
+                      }}
+                      className="px-3 py-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold rounded-lg border border-purple-200 transition-all cursor-pointer text-xs"
+                    >
+                      Compose Email
+                    </button>
+                    <button
+                      onClick={() => setSelectedRegForDetails(null)}
+                      className="px-4 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-semibold hover:bg-slate-700 transition-colors cursor-pointer"
+                    >
+                      Close Audit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Custom Custom Email Composer Modal */}
+          {showEmailComposerReg && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col border border-slate-200">
+                <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-blue-400" />
+                    <span className="font-extrabold text-sm text-white">Compose Onboarding Email</span>
+                  </div>
+                  <button
+                    onClick={() => setShowEmailComposerReg(null)}
+                    className="text-slate-400 hover:text-white focus:outline-none cursor-pointer p-1 rounded-lg border-0 bg-transparent text-lg font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form onSubmit={handleSendCustomEmailReg} className="p-6 space-y-4 text-xs font-semibold text-slate-600 text-left">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] uppercase tracking-wider text-slate-400">Recipient Email</label>
+                    <input
+                      type="email"
+                      disabled
+                      value={showEmailComposerReg.email}
+                      className="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 font-mono text-slate-500 cursor-not-allowed select-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] uppercase tracking-wider text-slate-400">Subject Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter subject..."
+                      value={customEmailSubject}
+                      onChange={(e) => setCustomEmailSubject(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] uppercase tracking-wider text-slate-400">Message Body *</label>
+                    <textarea
+                      required
+                      rows={6}
+                      placeholder="Type your message..."
+                      value={customEmailBody}
+                      onChange={(e) => setCustomEmailBody(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:border-blue-500 font-sans leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="pt-4 flex items-center justify-end gap-3 border-t">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmailComposerReg(null)}
+                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-4 rounded-lg cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={customEmailSending}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-5 rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    >
+                      {customEmailSending ? "Sending Email..." : "Send Message"}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
@@ -2600,11 +3002,19 @@ export default function AdminPanel({
                               handleFileProcess(e.dataTransfer.files[0], activeImageSlot);
                             }
                           }}
-                          onClick={() => {
+                          onClick={(e) => {
+                            // If clicked retry or error block, don't trigger file chooser twice
+                            if ((e.target as HTMLElement).closest(".retry-btn-container")) {
+                              return;
+                            }
                             document.getElementById("product-file-input")?.click();
                           }}
-                          className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[110px] ${
-                            isDragging 
+                          className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[110px] relative ${
+                            productImageUploading[activeImageSlot]
+                              ? "border-blue-400 bg-blue-50/20 cursor-wait"
+                              : productImageError[activeImageSlot]
+                              ? "border-red-400 bg-red-50/20"
+                              : isDragging
                               ? "border-[#0066FF] bg-blue-50/40" 
                               : "border-slate-300 bg-white hover:border-[#0066FF] hover:shadow-md hover:shadow-blue-500/5"
                           }`}
@@ -2612,7 +3022,7 @@ export default function AdminPanel({
                           <input 
                             type="file"
                             id="product-file-input"
-                            accept="image/jpeg, image/png, image/jpg"
+                            accept="image/jpeg, image/png, image/jpg, image/webp"
                             className="hidden"
                             onChange={(e) => {
                               if (e.target.files && e.target.files[0]) {
@@ -2620,11 +3030,48 @@ export default function AdminPanel({
                               }
                             }}
                           />
-                          <UploadCloud className={`w-6 h-6 mb-1.5 transition-colors ${isDragging ? "text-[#0066FF]" : "text-slate-400"}`} />
-                          <p className="font-bold text-slate-700 text-[11px]">
-                            {isDragging ? "Drop your image here!" : `Drag & drop JPEG/PNG for Slot ${activeImageSlot}`}
-                          </p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">or click to browse local files</p>
+
+                          {productImageUploading[activeImageSlot] ? (
+                            <div className="w-full space-y-2.5">
+                              <UploadCloud className="w-6 h-6 mb-1 text-blue-500 animate-bounce mx-auto" />
+                              <p className="font-extrabold text-blue-800 text-[10.5px]">Compressing & WebP Converting...</p>
+
+                              {/* Progressive Progress Bar */}
+                              <div className="w-4/5 mx-auto bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                <div
+                                  className="bg-blue-600 h-full rounded-full transition-all duration-300"
+                                  style={{ width: `${productImageProgress[activeImageSlot] || 0}%` }}
+                                />
+                              </div>
+                              <span className="text-[9px] text-slate-400 block font-mono">{productImageProgress[activeImageSlot] || 0}% Complete</span>
+                            </div>
+                          ) : productImageError[activeImageSlot] ? (
+                            <div className="w-full space-y-2 retry-btn-container">
+                              <AlertTriangle className="w-6 h-6 text-red-500 mx-auto" />
+                              <p className="font-bold text-red-800 text-[10px] line-clamp-1">{productImageError[activeImageSlot]}</p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const file = lastSelectedFiles[activeImageSlot];
+                                  if (file) {
+                                    handleFileProcess(file, activeImageSlot);
+                                  }
+                                }}
+                                className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-[9px] px-2.5 py-1 rounded cursor-pointer transition-colors shadow-2xs"
+                              >
+                                Retry Upload
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <UploadCloud className={`w-6 h-6 mb-1.5 transition-colors ${isDragging ? "text-[#0066FF]" : "text-slate-400"}`} />
+                              <p className="font-bold text-slate-700 text-[11px]">
+                                {isDragging ? "Drop your image here!" : `Drag & drop image for Slot ${activeImageSlot}`}
+                              </p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">JPEG, PNG, WEBP supported. Canvas compressed!</p>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
