@@ -15,6 +15,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
   const [companyName, setCompanyName] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
+  const [location, setLocation] = useState("");
   const [products, setProducts] = useState("");
   const [description, setDescription] = useState("");
   
@@ -38,6 +39,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
         companyName,
         mobile,
         email,
+        location,
         products,
         description
       };

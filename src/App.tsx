@@ -2137,6 +2137,41 @@ export default function App() {
       }
 
       if (isSupabaseConfigured) {
+        const emailLower = leadData.email ? leadData.email.trim().toLowerCase() : "";
+        let userIdToAttach = currentUser ? currentUser.id : null;
+
+        if (emailLower) {
+          try {
+            const { data: existingProf } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("email", emailLower)
+              .maybeSingle();
+
+            if (existingProf) {
+              userIdToAttach = existingProf.id;
+            } else {
+              const newUserId = "user-" + Math.random().toString(36).substr(2, 9);
+              const newProf = {
+                id: newUserId,
+                name: leadData.contactName || emailLower.split("@")[0],
+                email: emailLower,
+                companyName: leadData.companyName || "",
+                mobile: leadData.mobile || "",
+                city: leadData.city || "Delhi",
+                role: "buyer",
+                createdAt: new Date().toISOString()
+              };
+              const { error: insErr } = await supabase.from("profiles").insert([newProf]);
+              if (!insErr) {
+                userIdToAttach = newUserId;
+              }
+            }
+          } catch (pErr) {
+            console.warn("Could not resolve profile in Supabase during lead creation:", pErr);
+          }
+        }
+
         const supabaseLead = {
           id: leadId,
           title: leadData.title || "Software Sourcing Requirement",
@@ -2156,7 +2191,10 @@ export default function App() {
             need: leadData.bantNeed || leadData.description || "",
             timeline: leadData.timeline || ""
           },
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          userId: userIdToAttach,
+          sourceUrl: leadData.sourceUrl || "",
+          productName: leadData.productName || ""
         };
         const { error } = await supabase.from("leads").insert([supabaseLead]);
         if (error) {

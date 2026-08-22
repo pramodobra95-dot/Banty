@@ -92,6 +92,9 @@ export interface Lead {
   bant: BANTQualification;
   assignedVendors: string[]; // List of vendorIds assigned by Admin
   createdAt: string;
+  userId?: string;
+  sourceUrl?: string;
+  productName?: string;
 }
 
 export interface LeadAssignment {
