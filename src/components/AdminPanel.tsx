@@ -2479,6 +2479,7 @@ export default function AdminPanel({
                         <tr className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
                           <th className="p-3">Company Name / Contact</th>
                           <th className="p-3">Email / Mobile</th>
+                          <th className="p-3">Location</th>
                           <th className="p-3">Products / Services</th>
                           <th className="p-3">Company Description</th>
                           <th className="p-3">Registration Date</th>
@@ -2503,6 +2504,9 @@ export default function AdminPanel({
                             <td className="p-3">
                               <p className="font-mono text-slate-700 font-bold">{reg.email}</p>
                               <p className="font-mono text-slate-500 text-[10px]">{reg.mobile || "N/A"}</p>
+                            </td>
+                            <td className="p-3 font-semibold text-slate-700">
+                              {reg.location || "India"}
                             </td>
                             <td className="p-3 font-medium text-slate-700 max-w-xs truncate" title={reg.products}>
                               {reg.products || "N/A"}
@@ -3359,19 +3363,65 @@ export default function AdminPanel({
               <div key={l.id} className="border border-slate-200 rounded-xl p-4 space-y-4 bg-slate-50/50">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-100 pb-2">
                   <div>
-                    <span className="text-[10px] bg-slate-100 border text-slate-500 px-2.5 py-0.5 rounded uppercase font-bold">{l.category}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] bg-slate-100 border text-slate-500 px-2.5 py-0.5 rounded uppercase font-bold">{l.category}</span>
+                      {l.userId && (
+                        <span className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded font-extrabold">
+                          Linked User: {l.userId}
+                        </span>
+                      )}
+                    </div>
                     <h4 className="font-bold text-slate-800 text-xs mt-1.5">{l.title}</h4>
-                    <p className="text-[10px] text-slate-400">Buyer: {l.contactName} ({l.companyName}, {l.city})</p>
+                    <p className="text-[10px] text-slate-400">Created: {l.createdAt ? new Date(l.createdAt).toLocaleString() : "N/A"}</p>
                   </div>
                   
-                  <span className="text-xs font-bold bg-[#0066FF] text-white py-1 px-3 rounded">
+                  <span className="text-xs font-bold bg-[#0066FF] text-white py-1 px-3 rounded self-start md:self-auto">
                     Status: {l.status}
                   </span>
                 </div>
 
+                {/* Complete Customer Details Card */}
+                <div className="bg-white p-3.5 rounded-lg border border-slate-200/80 space-y-2 text-xs">
+                  <p className="font-extrabold text-slate-900 text-[11px] uppercase tracking-wider border-b pb-1">👤 Customer / Buyer Information</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-slate-700">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">User Name</span>
+                      <span className="font-bold text-slate-900">{l.contactName || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Company Name</span>
+                      <span className="font-semibold text-slate-800">{l.companyName || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Mobile Number</span>
+                      <span className="font-mono font-bold text-slate-800">{l.mobile || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Email Address</span>
+                      <span className="font-mono font-semibold text-blue-600 select-all">{l.email || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Location</span>
+                      <span className="font-semibold text-slate-800">{l.city || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Product / Service Name</span>
+                      <span className="font-semibold text-slate-800">{l.productName || l.title || "N/A"}</span>
+                    </div>
+                    {l.sourceUrl && (
+                      <div className="sm:col-span-2">
+                        <span className="text-[10px] text-slate-400 font-bold block uppercase">Source URL / Product URL</span>
+                        <a href={l.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-blue-500 hover:underline text-[11px] truncate block">
+                          {l.sourceUrl}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
                   <div className="md:col-span-2 space-y-2">
-                    <p className="font-bold text-slate-700">Detailed Description:</p>
+                    <p className="font-bold text-slate-700">Requirement / Enquiry Details:</p>
                     <p className="bg-white p-3 rounded border border-slate-100 line-clamp-3 leading-relaxed">{l.description}</p>
                   </div>
 

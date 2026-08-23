@@ -66,7 +66,9 @@ export default function SourcingLandingPage({
           need: `Verified Need - Explicit requirement for ${product.name} solutions`,
           timeline: `Urgency - target timeline set to ${timeline}`
         },
-        assignedVendors: []
+        assignedVendors: [],
+        sourceUrl: window.location.href,
+        productName: product.name
       };
 
       await onPostLead(leadData);

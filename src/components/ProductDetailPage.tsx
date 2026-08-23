@@ -242,6 +242,8 @@ export default function ProductDetailPage({
         city: leadForm.city,
         bantAuthority: leadForm.bantAuthority,
         bantNeed: leadForm.bantNeed,
+        sourceUrl: window.location.href,
+        productName: product ? product.name : ""
       });
       setBantModalOpen(false);
       safeAlert("Enquiry submitted! Sourcing desk is pre-qualifying BANT parameters.", "success");

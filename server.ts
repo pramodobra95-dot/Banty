@@ -1104,8 +1104,8 @@ async function resilientInsertLead(newLead: any, customClient?: any) {
   try {
     // Try Supabase-style schema first (quoted case-sensitive and matching supabase_setup.sql)
     await runner.query(
-      `INSERT INTO leads (id, title, category, description, budget, "companyName", "contactName", mobile, email, city, timeline, status, bant, "createdAt")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `INSERT INTO leads (id, title, category, description, budget, "companyName", "contactName", mobile, email, city, timeline, status, bant, "createdAt", "userId", "sourceUrl", "productName")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, category = EXCLUDED.category, status = EXCLUDED.status`,
       [
         newLead.id,
@@ -1121,7 +1121,10 @@ async function resilientInsertLead(newLead: any, customClient?: any) {
         newLead.timeline || "",
         newLead.status || "Submitted",
         JSON.stringify(newLead.bant || {}),
-        newLead.createdAt || new Date().toISOString()
+        newLead.createdAt || new Date().toISOString(),
+        newLead.userId || null,
+        newLead.sourceUrl || "",
+        newLead.productName || ""
       ]
     );
   } catch (err: any) {
@@ -1129,8 +1132,8 @@ async function resilientInsertLead(newLead: any, customClient?: any) {
     try {
       // Try local fallback schema (unquoted lowercase folded)
       await runner.query(
-        `INSERT INTO leads (id, buyerName, buyerCompany, buyerEmail, buyerPhone, category, budget, authority, need, timeline, description, score, status, createdAt, title, city)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        `INSERT INTO leads (id, buyerName, buyerCompany, buyerEmail, buyerPhone, category, budget, authority, need, timeline, description, score, status, createdAt, title, city, userid, sourceurl, productname)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
          ON CONFLICT (id) DO UPDATE SET buyerName = EXCLUDED.buyerName, buyerCompany = EXCLUDED.buyerCompany, status = EXCLUDED.status`,
         [
           newLead.id,
@@ -1148,7 +1151,10 @@ async function resilientInsertLead(newLead: any, customClient?: any) {
           newLead.status || "Submitted",
           newLead.createdAt || new Date().toISOString(),
           newLead.title || "Software Sourcing Requirement",
-          newLead.city || "Delhi"
+          newLead.city || "Delhi",
+          newLead.userId || null,
+          newLead.sourceUrl || "",
+          newLead.productName || ""
         ]
       );
     } catch (err2: any) {
@@ -1454,12 +1460,15 @@ async function initPostgres() {
       )
     `);
 
-    // Ensure leads table has title and city columns
+    // Ensure leads table has title, city, userId, sourceUrl, productName columns
     try {
       await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS title VARCHAR(200)");
       await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS city VARCHAR(100)");
+      await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS "userId" VARCHAR(100)');
+      await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS "sourceUrl" TEXT');
+      await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS "productName" VARCHAR(200)');
     } catch (err) {
-      console.warn("Could not alter leads table to add title and city:", err);
+      console.warn("Could not alter leads table to add title, city, userId, sourceUrl, productName:", err);
     }
 
     // Ensure profiles table has avatar and provider columns
@@ -1470,20 +1479,22 @@ async function initPostgres() {
       console.warn("Could not alter profiles table to add avatar and provider:", err);
     }
 
-    // Ensure partner_registrations has notes and documents columns
+    // Ensure partner_registrations has notes, documents, and location columns
     try {
       await client.query("ALTER TABLE partner_registrations ADD COLUMN IF NOT EXISTS notes TEXT");
       await client.query("ALTER TABLE partner_registrations ADD COLUMN IF NOT EXISTS documents TEXT");
+      await client.query("ALTER TABLE partner_registrations ADD COLUMN IF NOT EXISTS location VARCHAR(200)");
     } catch (err) {
-      console.warn("Could not alter partner_registrations to add notes and documents:", err);
+      console.warn("Could not alter partner_registrations to add notes, documents, location:", err);
     }
 
-    // Ensure vendor_registrations has notes and documents columns
+    // Ensure vendor_registrations has notes, documents, and location columns
     try {
       await client.query("ALTER TABLE vendor_registrations ADD COLUMN IF NOT EXISTS notes TEXT");
       await client.query("ALTER TABLE vendor_registrations ADD COLUMN IF NOT EXISTS documents TEXT");
+      await client.query("ALTER TABLE vendor_registrations ADD COLUMN IF NOT EXISTS location VARCHAR(200)");
     } catch (err) {
-      console.warn("Could not alter vendor_registrations to add notes and documents:", err);
+      console.warn("Could not alter vendor_registrations to add notes, documents, location:", err);
     }
 
     console.log("PostgreSQL tables checked/created.");
@@ -2152,34 +2163,20 @@ const sendBuyerWelcomeEmail = async (name: string, email: string) => {
 // Branded HTML welcome email template matching official BANTConfirm branding
 const sendBantConfirmWelcomeEmail = async (name: string, companyName: string, email: string) => {
   const bodyHtml = `
-    <h1 style="color: #0066FF; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Welcome to BANTConfirm Partner Network!</h1>
-    <p style="color: #475569; font-size: 14px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
-    <p style="color: #475569; font-size: 14px; line-height: 1.6;">Thank you for choosing BANTConfirm.</p>
-    <p style="color: #475569; font-size: 14px; line-height: 1.6;">Your registration has been received successfully. Our team will review your profile shortly.</p>
+    <h1 style="color: #0066FF; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Thank You for Registering with BANTConfirm!</h1>
+    <p style="color: #475569; font-size: 14px; line-height: 1.6;">Hi <strong>${name}</strong> (${companyName}),</p>
+    <p style="color: #475569; font-size: 14px; line-height: 1.6;">Thank you for registering with BANTConfirm. Your Vendor / Partner registration has been received successfully.</p>
 
     <div class="card" style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 20px; margin: 20px 0; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-      <h3 style="margin-top: 0; color: #0066FF; font-size: 15px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 12px;">✔ Partner Benefits & Core Features</h3>
+      <h3 style="margin-top: 0; color: #0066FF; font-size: 15px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 12px;">✔ Registration & Operating Model Summary</h3>
       <div style="font-size: 13px; line-height: 1.6; color: #334155;">
-        <div style="margin-bottom: 8px;">✔ <strong>No Upfront Registration Fee</strong></div>
-        <div style="margin-bottom: 8px;">✔ <strong>No Annual Listing Charges</strong></div>
-        <div style="margin-bottom: 8px;">✔ <strong>Performance-Based Revenue Model</strong></div>
-        <div style="margin-bottom: 8px;">✔ <strong>Pay Commission Only After Successful Deal Closure</strong></div>
-        <div style="margin-bottom: 8px;">✔ <strong>Access to Verified Enterprise Buyers</strong></div>
-        <div style="margin-bottom: 8px;">✔ <strong>Nationwide Business Opportunities</strong></div>
-        <div style="margin-bottom: 8px;">✔ <strong>Dedicated Vendor Dashboard</strong></div>
-        <div style="margin-bottom: 8px;">✔ <strong>AI-powered Lead Matching</strong></div>
-        <div style="margin-bottom: 8px;">✔ <strong>Real-Time Enquiry Notifications</strong></div>
-        <div style="margin-bottom: 8px;">✔ <strong>Product Showcase on BANTConfirm Marketplace</strong></div>
+        <div style="margin-bottom: 8px;">✔ <strong>No Upfront Payment Required:</strong> No upfront payment or registration fee is required to become a vendor on BANTConfirm.</div>
+        <div style="margin-bottom: 8px;">✔ <strong>Performance & Commission Model:</strong> BANTConfirm operates on a performance/commission-based model.</div>
+        <div style="margin-bottom: 8px;">✔ <strong>Commission Application:</strong> Commission is applicable only when a successfully generated business opportunity or deal is closed according to the applicable terms.</div>
+        <div style="margin-bottom: 8px;">✔ <strong>Product & Service Listing:</strong> As a registered vendor, you can add and list all eligible products and services in our marketplace catalog.</div>
+        <div style="margin-bottom: 8px;">✔ <strong>Vendor Verification:</strong> The BANTConfirm team will verify the vendor and company documentation where applicable.</div>
+        <div style="margin-bottom: 8px;">✔ <strong>Account & Login Instructions:</strong> You will receive further instructions and login information according to the account onboarding flow.</div>
       </div>
-    </div>
-
-    <div class="card" style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 20px; margin: 20px 0; border-radius: 12px;">
-      <h3 style="margin-top: 0; color: #b45309; font-size: 15px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #fef3c7; padding-bottom: 8px; margin-bottom: 12px;">💰 Transparent Payment Model</h3>
-      <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
-        We <strong>DO NOT</strong> charge any upfront payment.<br/>
-        You only pay a pre-agreed commission after a successful closed deal.<br/>
-        <strong>No Deal = No Commission.</strong>
-      </p>
     </div>
 
     <div class="card" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; margin: 20px 0; border-radius: 12px;">
@@ -2187,9 +2184,9 @@ const sendBantConfirmWelcomeEmail = async (name: string, companyName: string, em
       <div style="font-size: 13px; line-height: 1.6; color: #334155;">
         <ol style="margin: 0; padding-left: 20px;">
           <li style="margin-bottom: 6px;"><strong>Profile Review:</strong> Our administrative team pre-screens your company registry details.</li>
-          <li style="margin-bottom: 6px;"><strong>Verification:</strong> We confirm your GSTIN, corporate identity, and service focus area.</li>
-          <li style="margin-bottom: 6px;"><strong>Approval:</strong> Your BANTConfirm seller portal is approved and credentials dispatched.</li>
-          <li style="margin-bottom: 6px;"><strong>Product Publishing:</strong> Upload and list your product portfolio onto our search index.</li>
+          <li style="margin-bottom: 6px;"><strong>Verification:</strong> We verify your company information and service focus area.</li>
+          <li style="margin-bottom: 6px;"><strong>Approval & Account Setup:</strong> Your BANTConfirm seller portal is approved and instructions/login information dispatched.</li>
+          <li style="margin-bottom: 6px;"><strong>Product Publishing:</strong> Upload and list your eligible products and services onto our search index.</li>
           <li style="margin-bottom: 6px;"><strong>Start Sourcing:</strong> Instantly start receiving matching, qualified sales enquiries!</li>
         </ol>
       </div>
@@ -2721,7 +2718,7 @@ app.post("/api/auth/login", async (req, res) => {
 
 // API - Register Partner (With Auto-Onboarding & Emails)
 app.post("/api/auth/register-partner", async (req, res) => {
-  const { name, companyName, mobile, email, products, description } = req.body;
+  const { name, companyName, mobile, email, location, products, description } = req.body;
   const emailLower = email ? email.trim().toLowerCase() : "";
   const vendorId = `ven-${Date.now()}`;
   const userId = `user-${Date.now()}`;
@@ -2769,6 +2766,7 @@ app.post("/api/auth/register-partner", async (req, res) => {
     companyName: companyName || "New SaaS Corp",
     mobile: mobile || "",
     email: emailLower,
+    location: location || "India",
     products: products || "",
     description: description || "",
     createdAt: existingReg ? existingReg.createdAt : createdAt,
@@ -2796,6 +2794,7 @@ app.post("/api/auth/register-partner", async (req, res) => {
     company_name: registrationEntry.companyName,
     mobile: registrationEntry.mobile,
     email: registrationEntry.email,
+    location: registrationEntry.location,
     products: registrationEntry.products,
     description: registrationEntry.description,
     status: "Pending",
@@ -2808,8 +2807,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
   if (pgPool) {
     try {
       await pgPool.query(
-        `INSERT INTO partner_registrations (id, name, "companyName", mobile, email, products, description, "createdAt", status, source, "userId")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        `INSERT INTO partner_registrations (id, name, "companyName", mobile, email, products, description, "createdAt", status, source, "userId", location)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          ON CONFLICT (id) DO UPDATE SET
            name = EXCLUDED.name,
            "companyName" = EXCLUDED."companyName",
@@ -2817,7 +2816,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
            products = EXCLUDED.products,
            description = EXCLUDED.description,
            status = EXCLUDED.status,
-           "userId" = EXCLUDED."userId"`,
+           "userId" = EXCLUDED."userId",
+           location = EXCLUDED.location`,
         [
           registrationEntry.id,
           registrationEntry.name,
@@ -2829,7 +2829,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
           registrationEntry.createdAt,
           registrationEntry.status,
           registrationEntry.source,
-          registrationEntry.userId
+          registrationEntry.userId,
+          registrationEntry.location
         ]
       );
     } catch (err) {
@@ -2838,15 +2839,16 @@ app.post("/api/auth/register-partner", async (req, res) => {
 
     try {
       await pgPool.query(
-        `INSERT INTO vendor_registrations (id, full_name, company_name, mobile, email, products, description, status, email_verified, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `INSERT INTO vendor_registrations (id, full_name, company_name, mobile, email, products, description, status, email_verified, created_at, location)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          ON CONFLICT (id) DO UPDATE SET
            full_name = EXCLUDED.full_name,
            company_name = EXCLUDED.company_name,
            mobile = EXCLUDED.mobile,
            products = EXCLUDED.products,
            description = EXCLUDED.description,
-           status = EXCLUDED.status`,
+           status = EXCLUDED.status,
+           location = EXCLUDED.location`,
         [
           vendorRegEntry.id,
           vendorRegEntry.full_name,
@@ -2857,7 +2859,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
           vendorRegEntry.description,
           vendorRegEntry.status,
           vendorRegEntry.email_verified,
-          vendorRegEntry.created_at
+          vendorRegEntry.created_at,
+          vendorRegEntry.location
         ]
       );
     } catch (err) {
@@ -2894,27 +2897,65 @@ app.post("/api/auth/register-partner", async (req, res) => {
     }
   }
 
-  // Immediately send a branded HTML Welcome email (Subject: Welcome to BANTConfirm Partner Network)
-  sendBantConfirmWelcomeEmail(name, companyName, emailLower).catch(console.error);
+  // Step 3 & 4 & 5: Server-side vendor account creation, confirmation email, & error safety
+  let vendorAccountUser: any = existingUser;
+  if (!vendorAccountUser && emailLower) {
+    const tempPassword = "BANT@" + Math.floor(1000 + Math.random() * 9000);
+    vendorAccountUser = {
+      id: userId,
+      name: name || "Vendor Partner",
+      email: emailLower,
+      companyName: companyName || "New SaaS Corp",
+      mobile: mobile || "",
+      city: "India",
+      gstNumber: "27AAAAA1111A1Z1",
+      businessType: "Solution Provider",
+      role: "vendor",
+      vendorId: vendorId,
+      password: tempPassword,
+      createdAt: createdAt
+    };
+    if (!db.users) db.users = [];
+    db.users.push(vendorAccountUser);
 
-  // Send alert to Admin
-  const adminAlertHtml = getEmailTemplate(
-    "New Partner Application Registered",
-    `
-      <h1>New Certified IT Vendor Registration</h1>
-      <p>A new software or IT provider has registered on the platform and is awaiting admin review:</p>
-      <ul>
-        <li><strong>Company Name:</strong> ${companyName}</li>
-        <li><strong>Representative Name:</strong> ${name}</li>
-        <li><strong>Mobile:</strong> ${mobile || "N/A"}</li>
-        <li><strong>Email:</strong> ${emailLower}</li>
-        <li><strong>Products/Services:</strong> ${products || "N/A"}</li>
-        <li><strong>Description:</strong> ${description || "N/A"}</li>
-        <li><strong>Duplicate Check:</strong> ${isDuplicate ? "Duplicate Email Detected (Linked to existing account)" : "New unique registration"}</li>
-      </ul>
-    `
-  );
-  sendResendEmail("pramodobra95@gmail.com", `New Partner Registration - ${companyName}`, adminAlertHtml).catch(console.error);
+    if (pgPool) {
+      try {
+        await resilientInsertProfile(vendorAccountUser);
+      } catch (err) {
+        console.error("Error creating vendor profile in Postgres during registration:", err);
+      }
+    }
+  }
+
+  // Safely attempt confirmation email sending without breaking registration flow
+  try {
+    await sendBantConfirmWelcomeEmail(name, companyName, emailLower);
+  } catch (emailErr) {
+    console.error("[Email Failure Non-Blocking Log] Vendor confirmation email sending failed:", emailErr);
+  }
+
+  // Send alert to Admin (wrapped in try-catch so it doesn't break flow)
+  try {
+    const adminAlertHtml = getEmailTemplate(
+      "New Partner Application Registered",
+      `
+        <h1>New Certified IT Vendor Registration</h1>
+        <p>A new software or IT provider has registered on the platform and is awaiting admin review:</p>
+        <ul>
+          <li><strong>Company Name:</strong> ${companyName}</li>
+          <li><strong>Representative Name:</strong> ${name}</li>
+          <li><strong>Mobile:</strong> ${mobile || "N/A"}</li>
+          <li><strong>Email:</strong> ${emailLower}</li>
+          <li><strong>Products/Services:</strong> ${products || "N/A"}</li>
+          <li><strong>Description:</strong> ${description || "N/A"}</li>
+          <li><strong>Duplicate Check:</strong> ${isDuplicate ? "Duplicate Email Detected (Linked to existing account)" : "New unique registration"}</li>
+        </ul>
+      `
+    );
+    await sendResendEmail("pramodobra95@gmail.com", `New Partner Registration - ${companyName}`, adminAlertHtml);
+  } catch (adminEmailErr) {
+    console.error("[Email Failure Non-Blocking Log] Admin alert email sending failed:", adminEmailErr);
+  }
 
   // For visual demo/simulator purposes, return a preview user and vendor object so they see the flow in sandbox
   const demoUser = {
@@ -3774,7 +3815,38 @@ app.get("/api/leads", async (req, res) => {
 
   if (pgPool) {
     try {
-      // Query without database-level ordering to avoid Case-Sensitivity issues with createdAt/createdat
+      // Fetch all users/profiles to resolve missing user info for leads
+      let profilesMap = new Map();
+      try {
+        const pQuery = await pgPool.query("SELECT * FROM profiles");
+        pQuery.rows.forEach(p => {
+          const emailLower = (p.email || "").trim().toLowerCase();
+          if (emailLower) {
+            profilesMap.set(emailLower, {
+              id: p.id,
+              name: p.name,
+              email: p.email,
+              companyName: p.companyname || p.companyName || "",
+              mobile: p.mobile || "",
+              city: p.city || ""
+            });
+          }
+          if (p.id) {
+            profilesMap.set(p.id, {
+              id: p.id,
+              name: p.name,
+              email: p.email,
+              companyName: p.companyname || p.companyName || "",
+              mobile: p.mobile || "",
+              city: p.city || ""
+            });
+          }
+        });
+      } catch (pErr) {
+        console.warn("Could not query profiles map for leads enrichment:", pErr);
+      }
+
+      // Query leads
       const q = await pgPool.query("SELECT * FROM leads");
       let list = q.rows.map(l => {
         // Unify both local schema and Supabase schema properties
@@ -3782,11 +3854,25 @@ app.get("/api/leads", async (req, res) => {
         const descVal = l.description || "";
         const timelineVal = l.timeline || "";
         const titleVal = l.title || descVal?.split('\n')[0] || "Software Sourcing Requirement";
-        const company = l.buyercompany || l.buyerCompany || l.companyName || "";
-        const contact = l.buyername || l.buyerName || l.contactName || "";
-        const phone = l.buyerphone || l.buyerPhone || l.mobile || "";
-        const emailVal = l.buyeremail || l.buyerEmail || l.email || "";
+        let company = l.buyercompany || l.buyerCompany || l.companyName || "";
+        let contact = l.buyername || l.buyerName || l.contactName || "";
+        let phone = l.buyerphone || l.buyerPhone || l.mobile || "";
+        let emailVal = l.buyeremail || l.buyerEmail || l.email || "";
+        let cityVal = l.city || "";
         const createdAtVal = l.createdat || l.createdAt || "";
+        const userIdVal = l.userid || l.userId || null;
+        const sourceUrlVal = l.sourceurl || l.sourceUrl || "";
+        const productNameVal = l.productname || l.productName || "";
+
+        // Resolve missing customer details from matched profile if available
+        const matchedProfile = (userIdVal && profilesMap.get(userIdVal)) || (emailVal && profilesMap.get(emailVal.trim().toLowerCase()));
+        if (matchedProfile) {
+          if (!contact) contact = matchedProfile.name;
+          if (!company) company = matchedProfile.companyName;
+          if (!phone) phone = matchedProfile.mobile;
+          if (!emailVal) emailVal = matchedProfile.email;
+          if (!cityVal) cityVal = matchedProfile.city;
+        }
 
         return {
           id: l.id,
@@ -3798,7 +3884,7 @@ app.get("/api/leads", async (req, res) => {
           contactName: contact,
           mobile: phone,
           email: emailVal,
-          city: l.city || "Delhi",
+          city: cityVal || "Delhi",
           timeline: timelineVal,
           status: l.status || 'Submitted',
           bant: {
@@ -3808,7 +3894,10 @@ app.get("/api/leads", async (req, res) => {
             timeline: timelineVal
           },
           assignedVendors: [],
-          createdAt: createdAtVal
+          createdAt: createdAtVal,
+          userId: userIdVal || (matchedProfile ? matchedProfile.id : null),
+          sourceUrl: sourceUrlVal,
+          productName: productNameVal
         };
       });
 
@@ -3833,11 +3922,40 @@ app.get("/api/leads", async (req, res) => {
     }
   }
 
+  const enrichedLeads = db.leads.map((lead: any) => {
+    let contactName = lead.contactName || "";
+    let companyName = lead.companyName || "";
+    let mobile = lead.mobile || "";
+    let email = lead.email || "";
+    let city = lead.city || "";
+
+    const matchedUser = (lead.userId && db.users?.find((u: any) => u.id === lead.userId)) ||
+                        (email && db.users?.find((u: any) => u.email && u.email.trim().toLowerCase() === email.trim().toLowerCase()));
+
+    if (matchedUser) {
+      if (!contactName) contactName = matchedUser.name;
+      if (!companyName) companyName = matchedUser.companyName;
+      if (!mobile) mobile = matchedUser.mobile;
+      if (!email) email = matchedUser.email;
+      if (!city) city = matchedUser.city;
+    }
+
+    return {
+      ...lead,
+      contactName,
+      companyName,
+      mobile,
+      email,
+      city: city || "Delhi",
+      userId: lead.userId || (matchedUser ? matchedUser.id : null)
+    };
+  });
+
   if (vendorId) {
     const leadAssignments = db.leadAssignments.filter(la => la.vendorId === vendorId);
     const assignedIds = leadAssignments.map(la => la.leadId);
 
-    const augmentedLeads = db.leads.map(lead => ({
+    const augmentedLeads = enrichedLeads.map(lead => ({
       ...lead,
       isAssignedToMe: assignedIds.includes(lead.id),
       assignmentStatus: leadAssignments.find(la => la.leadId === lead.id)?.status || 'None',
@@ -3845,7 +3963,7 @@ app.get("/api/leads", async (req, res) => {
     }));
     res.json(augmentedLeads);
   } else {
-    const augmentedLeads = db.leads.map(lead => {
+    const augmentedLeads = enrichedLeads.map(lead => {
       const assignments = db.leadAssignments.filter(la => la.leadId === lead.id).map(la => {
         const vendor = db.vendors.find(v => v.id === la.vendorId);
         return {
@@ -3868,17 +3986,116 @@ app.get("/api/leads", async (req, res) => {
 // Create Lead (Post Requirement)
 app.post("/api/leads", async (req, res) => {
   const l = req.body;
+  const emailLower = l.email ? l.email.trim().toLowerCase() : "";
+
+  // Step 1: Find or create user record
+  let existingUser: any = null;
+
+  if (emailLower) {
+    if (db.users) {
+      existingUser = db.users.find((u: any) => u.email && u.email.trim().toLowerCase() === emailLower);
+    }
+
+    if (!existingUser && pgPool) {
+      try {
+        const qUser = await pgPool.query("SELECT * FROM profiles WHERE LOWER(email) = $1 LIMIT 1", [emailLower]);
+        if (qUser.rows.length > 0) {
+          const row = qUser.rows[0];
+          existingUser = {
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            companyName: row.companyname || row.companyName || "",
+            mobile: row.mobile || "",
+            city: row.city || "",
+            role: row.role || "buyer",
+            createdAt: row.createdat || row.createdAt || new Date().toISOString()
+          };
+          if (!db.users) db.users = [];
+          if (!db.users.some((u: any) => u.id === existingUser.id)) {
+            db.users.push(existingUser);
+          }
+        }
+      } catch (err) {
+        console.error("Error querying profile in POST /api/leads:", err);
+      }
+    }
+
+    // If user does not exist yet, create the user record
+    if (!existingUser) {
+      existingUser = {
+        id: "user-" + Math.random().toString(36).substr(2, 9),
+        name: l.contactName || (l.email ? l.email.split("@")[0] : "Buyer"),
+        email: emailLower,
+        companyName: l.companyName || "",
+        mobile: l.mobile || "",
+        city: l.city || "Delhi",
+        role: "buyer",
+        createdAt: new Date().toISOString()
+      };
+      if (!db.users) db.users = [];
+      db.users.push(existingUser);
+
+      if (pgPool) {
+        try {
+          await resilientInsertProfile(existingUser);
+        } catch (err) {
+          console.error("Error inserting profile in POST /api/leads:", err);
+        }
+      }
+    } else {
+      // Update existing user record with any new available information if missing
+      let updatedUser = false;
+      if (!existingUser.companyName && l.companyName) {
+        existingUser.companyName = l.companyName;
+        updatedUser = true;
+      }
+      if (!existingUser.mobile && l.mobile) {
+        existingUser.mobile = l.mobile;
+        updatedUser = true;
+      }
+      if (!existingUser.city && l.city) {
+        existingUser.city = l.city;
+        updatedUser = true;
+      }
+      if (!existingUser.name && l.contactName) {
+        existingUser.name = l.contactName;
+        updatedUser = true;
+      }
+      if (updatedUser) {
+        const memoryIdx = db.users?.findIndex((u: any) => u.id === existingUser.id);
+        if (memoryIdx !== -1 && db.users) {
+          db.users[memoryIdx] = { ...db.users[memoryIdx], ...existingUser };
+        }
+        if (pgPool) {
+          try {
+            await resilientInsertProfile(existingUser);
+          } catch (err) {
+            console.error("Error updating profile in POST /api/leads:", err);
+          }
+        }
+      }
+    }
+  }
+
+  // Construct complete lead record associated with user
+  const contactName = l.contactName || (existingUser ? existingUser.name : "") || "Verified Buyer";
+  const companyName = l.companyName || (existingUser ? existingUser.companyName : "") || "";
+  const mobile = l.mobile || (existingUser ? existingUser.mobile : "") || "";
+  const email = emailLower || (existingUser ? existingUser.email : "") || "";
+  const city = l.city || (existingUser ? existingUser.city : "") || "Delhi";
+
   const newLead = {
     id: l.id || `lead-${Date.now()}`,
     title: l.title || "Software Sourcing Requirement",
     category: l.category,
     description: l.description,
     budget: l.budget,
-    companyName: l.companyName,
-    contactName: l.contactName,
-    mobile: l.mobile,
-    email: l.email,
-    city: l.city || "Delhi",
+    companyName: companyName,
+    contactName: contactName,
+    mobile: mobile,
+    email: email,
+    city: city,
     timeline: l.timeline,
     status: "Submitted",
     bant: {
@@ -3888,7 +4105,10 @@ app.post("/api/leads", async (req, res) => {
       timeline: l.bantTimeline || "Planned implementation within timeline"
     },
     assignedVendors: [],
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    userId: existingUser ? existingUser.id : null,
+    sourceUrl: l.sourceUrl || "",
+    productName: l.productName || ""
   };
   db.leads.push(newLead);
   
