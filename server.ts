@@ -11,7 +11,7 @@ dotenv.config();
 
 const app = express();
 app.use(compression());
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Enable JSON bodies
 app.use(express.json());
@@ -5516,43 +5516,78 @@ const seoConfig: Record<string, {
     description: "India's premier B2B Enterprise IT & Software Solutions marketplace. We pre-qualify procurement requirements using strict Budget, Authority, Need, and Timeline (BANT) criteria, saving months of sourcing efforts.",
     canonical: "https://www.bantconfirm.com/",
     h1: "Verify Sourcing via Budget, Authority, Need & Timeline (BANT)",
-    schema: {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "BANTConfirm",
-      "url": "https://www.bantconfirm.com/",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://www.bantconfirm.com/?search={search_term_string}",
-        "query-input": "required name=search_term_string"
+    schema: [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "BANTConfirm",
+        "url": "https://www.bantconfirm.com/",
+        "logo": "https://www.bantconfirm.com/favicon.png",
+        "description": "India's premier B2B enterprise IT & software solutions sourcing marketplace utilizing the BANT framework.",
+        "sameAs": [
+          "https://www.linkedin.com/company/bant-confirm/",
+          "https://www.facebook.com/share/1Gn5NuBmMJ/",
+          "https://www.instagram.com/bantconfirm?igsh=Z2FpYW9iYnk2c3Zr"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "BANTConfirm",
+        "url": "https://www.bantconfirm.com/",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://www.bantconfirm.com/?search={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
       }
-    }
+    ]
   },
   "/about": {
     title: "About BANTConfirm | India's #1 Certified B2B Sourcing Marketplace",
     description: "Learn how BANTConfirm revolutionizes enterprise IT Sourcing in India by pre-qualifying software, IT hardware, and services procurement using strict Budget, Authority, Need, and Timeline (BANT) criteria.",
     canonical: "https://www.bantconfirm.com/about",
     h1: "About BANTConfirm Sourcing Marketplace",
-    schema: {
-      "@context": "https://schema.org",
-      "@type": "AboutPage",
-      "name": "About BANTConfirm",
-      "description": "Learn about India's premium B2B IT sourcing platform using the BANT framework.",
-      "url": "https://www.bantconfirm.com/about"
-    }
+    schema: [
+      {
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        "name": "About BANTConfirm",
+        "description": "Learn about India's premium B2B IT sourcing platform using the BANT framework.",
+        "url": "https://www.bantconfirm.com/about"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.bantconfirm.com/" },
+          { "@type": "ListItem", "position": 2, "name": "About", "item": "https://www.bantconfirm.com/about" }
+        ]
+      }
+    ]
   },
   "/contact": {
     title: "Contact BANTConfirm | Support & Corporate HQ Noida",
     description: "Contact BANTConfirm Support Desk for enterprise B2B partner registration, immediate telephone routing, corporate registry audits, or solution procurement assistance.",
     canonical: "https://www.bantconfirm.com/contact",
     h1: "Contact BANTConfirm Support Desk",
-    schema: {
-      "@context": "https://schema.org",
-      "@type": "ContactPage",
-      "name": "Contact BANTConfirm",
-      "description": "Contact BANTConfirm Support Desk for enterprise B2B partner registration and support.",
-      "url": "https://www.bantconfirm.com/contact"
-    }
+    schema: [
+      {
+        "@context": "https://schema.org",
+        "@type": "ContactPage",
+        "name": "Contact BANTConfirm",
+        "description": "Contact BANTConfirm Support Desk for enterprise B2B partner registration and support.",
+        "url": "https://www.bantconfirm.com/contact"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.bantconfirm.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Contact", "item": "https://www.bantconfirm.com/contact" }
+        ]
+      }
+    ]
   },
   "/services": {
     title: "Our Services & Enterprise IT Solutions | BANTConfirm Marketplace",
@@ -5686,22 +5721,35 @@ function getSEOPageHtml(reqPath: string, baseHtml: string) {
         description: `Compare detailed technical specs, customer reviews, and direct vendor pricing for ${matched.name} under category ${matched.category}. Verify decision authority and matching budget constraints.`,
         canonical: `https://www.bantconfirm.com/product/${slug}`,
         h1: matched.name,
-        schema: {
-          "@context": "https://schema.org",
-          "@type": "Product",
-          "name": matched.name,
-          "description": matched.description,
-          "image": matched.images?.[0] || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop",
-          "brand": {
-            "@type": "Brand",
-            "name": matched.vendorName
+        schema: [
+          {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": matched.name,
+            "description": matched.description,
+            "image": matched.images?.[0] || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop",
+            "brand": {
+              "@type": "Brand",
+              "name": matched.vendorName
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": matched.pricing ? matched.pricing.replace(/[^0-9]/g, "") || "45000" : "45000",
+              "priceCurrency": "INR",
+              "availability": "https://schema.org/InStock",
+              "url": `https://www.bantconfirm.com/product/${slug}`
+            }
           },
-          "offers": {
-            "@type": "Offer",
-            "price": matched.pricing ? matched.pricing.replace(/[^0-9]/g, "") || "45000" : "45000",
-            "priceCurrency": "INR"
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.bantconfirm.com/" },
+              { "@type": "ListItem", "position": 2, "name": "Products", "item": "https://www.bantconfirm.com/products" },
+              { "@type": "ListItem", "position": 3, "name": matched.name, "item": `https://www.bantconfirm.com/product/${slug}` }
+            ]
           }
-        }
+        ]
       };
     }
   }
@@ -5715,19 +5763,124 @@ function getSEOPageHtml(reqPath: string, baseHtml: string) {
         description: `Source verified digital software portfolios, specifications, and client rating reports of ${matched.companyName} in ${matched.location || "India"}. Pre-qualify direct BANT RfQs.`,
         canonical: `https://www.bantconfirm.com/vendor/${slug}`,
         h1: matched.companyName,
-        schema: {
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          "name": matched.companyName,
-          "url": matched.website || `https://www.bantconfirm.com/vendor/${slug}`,
-          "logo": matched.logo || "https://www.bantconfirm.com/favicon.png",
-          "address": {
-            "@type": "PostalAddress",
-            "addressLocality": matched.location || "India"
+        schema: [
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": matched.companyName,
+            "url": matched.website || `https://www.bantconfirm.com/vendor/${slug}`,
+            "logo": matched.logo || "https://www.bantconfirm.com/favicon.png",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": matched.location || "India",
+              "addressCountry": "IN"
+            }
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.bantconfirm.com/" },
+              { "@type": "ListItem", "position": 2, "name": "Vendors", "item": "https://www.bantconfirm.com/vendors" },
+              { "@type": "ListItem", "position": 3, "name": matched.companyName, "item": `https://www.bantconfirm.com/vendor/${slug}` }
+            ]
           }
-        }
+        ]
       };
     }
+  }
+
+  if (!config && p.startsWith("/blog/")) {
+    const slug = p.substring("/blog/".length);
+    const matched = db.blogs.find(b => (b.slug || "").toLowerCase() === slug || String(b.id) === slug);
+    if (matched) {
+      config = {
+        title: `${matched.title} | BANTConfirm Sourcing Blog`,
+        description: matched.metaDescription || (matched.content ? matched.content.substring(0, 155) + "..." : "Read expert B2B IT procurement and Sourcing insights on BANTConfirm."),
+        canonical: `https://www.bantconfirm.com/blog/${slug}`,
+        h1: matched.title,
+        schema: [
+          {
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "headline": matched.title,
+            "description": matched.metaDescription || (matched.content ? matched.content.substring(0, 155) : ""),
+            "image": matched.image || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop",
+            "author": { "@type": "Person", "name": matched.author || "BANTConfirm Editorial Team" },
+            "publisher": { "@type": "Organization", "name": "BANTConfirm", "logo": { "@type": "ImageObject", "url": "https://www.bantconfirm.com/favicon.png" } },
+            "datePublished": matched.createdAt || new Date().toISOString()
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.bantconfirm.com/" },
+              { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://www.bantconfirm.com/blog" },
+              { "@type": "ListItem", "position": 3, "name": matched.title, "item": `https://www.bantconfirm.com/blog/${slug}` }
+            ]
+          }
+        ]
+      };
+    }
+  }
+
+  if (!config && p.startsWith("/sourcing/")) {
+    const slug = p.substring("/sourcing/".length);
+    const parts = slug.split("-in-");
+    const prodTitle = parts[0] ? parts[0].replace(/-/g, " ").toUpperCase() : "B2B Software";
+    const locTitle = parts[1] ? parts[1].replace(/-/g, " ").toUpperCase() : "India";
+    config = {
+      title: `${prodTitle} Sourcing in ${locTitle} | BANT Qualified Vendors - BANTConfirm`,
+      description: `Find pre-screened BANT qualified ${prodTitle} vendors in ${locTitle}. Get verified quotes matching your budget, decision authority, and deployment timeline.`,
+      canonical: `https://www.bantconfirm.com/sourcing/${slug}`,
+      h1: `${prodTitle} Sourcing in ${locTitle}`,
+      schema: [
+        {
+          "@context": "https://schema.org",
+          "@type": "Service",
+          "name": `${prodTitle} Sourcing in ${locTitle}`,
+          "provider": { "@type": "Organization", "name": "BANTConfirm" },
+          "areaServed": { "@type": "AdministrativeArea", "name": locTitle }
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.bantconfirm.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Sourcing", "item": "https://www.bantconfirm.com/services" },
+            { "@type": "ListItem", "position": 3, "name": `${prodTitle} in ${locTitle}`, "item": `https://www.bantconfirm.com/sourcing/${slug}` }
+          ]
+        }
+      ]
+    };
+  }
+
+  if (!config && p.startsWith("/category/")) {
+    const rawCat = p.substring("/category/".length);
+    const catName = decodeURIComponent(rawCat);
+    config = {
+      title: `${catName} Solutions & BANT Verified Vendors | BANTConfirm`,
+      description: `Compare verified ${catName} software suites, technical features, and pricing from certified vendors across India.`,
+      canonical: `https://www.bantconfirm.com/category/${rawCat}`,
+      h1: `${catName} Solutions`,
+      schema: [
+        {
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": `${catName} Solutions`,
+          "description": `Compare verified ${catName} software suites and vendors.`
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.bantconfirm.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Categories", "item": "https://www.bantconfirm.com/categories" },
+            { "@type": "ListItem", "position": 3, "name": catName, "item": `https://www.bantconfirm.com/category/${rawCat}` }
+          ]
+        }
+      ]
+    };
   }
 
   if (!config) {
@@ -5802,10 +5955,13 @@ async function startServer() {
       { loc: "https://www.bantconfirm.com/services", changefreq: "weekly", priority: "0.8" },
       { loc: "https://www.bantconfirm.com/vendors", changefreq: "daily", priority: "0.9" },
       { loc: "https://www.bantconfirm.com/categories", changefreq: "daily", priority: "0.9" },
+      { loc: "https://www.bantconfirm.com/products", changefreq: "daily", priority: "0.9" },
       { loc: "https://www.bantconfirm.com/blog", changefreq: "daily", priority: "0.8" },
       { loc: "https://www.bantconfirm.com/privacy-policy", changefreq: "monthly", priority: "0.5" },
       { loc: "https://www.bantconfirm.com/terms-and-conditions", changefreq: "monthly", priority: "0.5" },
-      { loc: "https://www.bantconfirm.com/become-partner", changefreq: "weekly", priority: "0.8" }
+      { loc: "https://www.bantconfirm.com/become-partner", changefreq: "weekly", priority: "0.8" },
+      { loc: "https://www.bantconfirm.com/compare", changefreq: "weekly", priority: "0.8" },
+      { loc: "https://www.bantconfirm.com/directory", changefreq: "weekly", priority: "0.8" }
     ];
 
     const todayStr = new Date().toISOString().split("T")[0];
@@ -5923,6 +6079,20 @@ async function startServer() {
   </url>`;
       }
     });
+
+    // Add category pages
+    if (db.categories && Array.isArray(db.categories)) {
+      db.categories.forEach(cat => {
+        const slug = encodeURIComponent(cat.name);
+        urlsXml += `
+  <url>
+    <loc>https://www.bantconfirm.com/category/${slug}</loc>
+    <lastmod>${todayStr}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+      });
+    }
 
     // Add blog posts
     blogsList.forEach(b => {
@@ -6390,23 +6560,35 @@ async function startServer() {
     res.json({ success: true, registration, vendor: activeVendor, user: companionUser });
   });
 
-  // Serve robots.txt
+  // Serve robots.txt for AI Search & AI Discoverability
   app.get("/robots.txt", (req, res) => {
     res.header("Content-Type", "text/plain");
     const robotsTxt = `# robots.txt for BANTConfirm Marketplace India
+# Optimized for AI Search Systems (ChatGPT Search, Google Gemini/AI Overviews, Microsoft Copilot, Perplexity)
 User-agent: *
 Allow: /
 Allow: /about
 Allow: /contact
 Allow: /services
 Allow: /vendors
+Allow: /vendor/
 Allow: /categories
+Allow: /category/
+Allow: /products
+Allow: /products/
+Allow: /product/
 Allow: /blog
+Allow: /blog/
+Allow: /sourcing/
 Allow: /privacy-policy
 Allow: /terms-and-conditions
 Allow: /become-partner
+Allow: /compare
+Allow: /directory
 Disallow: /admin-panel
 Disallow: /dashboard
+Disallow: /login
+Disallow: /signup
 Disallow: /api/
 
 Sitemap: https://www.bantconfirm.com/sitemap.xml`;

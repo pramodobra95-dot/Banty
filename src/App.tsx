@@ -2484,9 +2484,20 @@ export default function App() {
     }
   };
 
-  // 5. Vendor products management (Add/Update/Delete)
+  // Helper to update product cache in localStorage
+  const updateProductCache = (updatedList: Product[]) => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        localStorage.setItem("cache_products", JSON.stringify(updatedList));
+      }
+    } catch (e) {
+      console.warn("Could not write products cache to localStorage:", e);
+    }
+  };
+
+  // 5. Vendor products management (Add/Update/Delete with instant optimistic UI)
   const handleAddProduct = async (productData: any) => {
-    const newProduct = {
+    const newProduct: Product = {
       id: productData.id || `prod-${Date.now()}`,
       name: productData.name,
       description: productData.description || "",
@@ -2508,12 +2519,24 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
 
+    // Instant optimistic state & cache update (<1ms)
+    setProducts(prev => {
+      const updated = [newProduct, ...prev.filter(p => p.id !== newProduct.id)];
+      updateProductCache(updated);
+      return updated;
+    });
+
     try {
       if (isSupabaseConfigured) {
         const { error } = await supabase.from("products").insert([newProduct]);
         if (error) throw error;
-        fetchAllData();
-        safeAlert("Product added successfully to Supabase!", "success");
+        // Non-blocking sync with local backend
+        fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productData)
+        }).catch(() => {});
+        safeAlert("Product published instantly!", "success");
       } else {
         const res = await fetch("/api/products", {
           method: "POST",
@@ -2521,8 +2544,7 @@ export default function App() {
           body: JSON.stringify(productData)
         });
         if (res.ok) {
-          fetchAllData();
-          safeAlert("Product added successfully!", "success");
+          safeAlert("Product published instantly!", "success");
         } else {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || "Failed to add product on local server.");
@@ -2538,10 +2560,6 @@ export default function App() {
       );
       
       if (isRlsError && isSupabaseConfigured) {
-        // RESILIENT IN-MEMORY FALLBACK: Add to react state so it shows up on dashboard and admin panel!
-        setProducts(prev => [newProduct, ...prev]);
-        
-        // Also save to standard local backend so it's not lost
         fetch("/api/products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -2558,12 +2576,23 @@ export default function App() {
   };
 
   const handleUpdateProduct = async (productId: string, productData: any) => {
+    // Instant optimistic state & cache update (<1ms)
+    setProducts(prev => {
+      const updated = prev.map(p => p.id === productId ? { ...p, ...productData } : p);
+      updateProductCache(updated);
+      return updated;
+    });
+
     try {
       if (isSupabaseConfigured) {
         const { error } = await supabase.from("products").update(productData).eq("id", productId);
         if (error) throw error;
-        fetchAllData();
-        safeAlert("Product updated successfully in Supabase!", "success");
+        fetch(`/api/products/${productId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productData)
+        }).catch(() => {});
+        safeAlert("Product updated instantly!", "success");
       } else {
         const res = await fetch(`/api/products/${productId}`, {
           method: "PUT",
@@ -2571,8 +2600,7 @@ export default function App() {
           body: JSON.stringify(productData)
         });
         if (res.ok) {
-          fetchAllData();
-          safeAlert("Product updated successfully!", "success");
+          safeAlert("Product updated instantly!", "success");
         }
       }
     } catch (err: any) {
@@ -2585,8 +2613,6 @@ export default function App() {
       );
 
       if (isRlsError && isSupabaseConfigured) {
-        // UI memory fallback
-        setProducts(prev => prev.map(p => p.id === productId ? { ...p, ...productData } : p));
         fetch(`/api/products/${productId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -2603,19 +2629,27 @@ export default function App() {
   };
 
   const handleDeleteProduct = async (productId: string) => {
+    // Instant optimistic state & cache update (<1ms)
+    setProducts(prev => {
+      const updated = prev.filter(p => p.id !== productId);
+      updateProductCache(updated);
+      return updated;
+    });
+
     try {
       if (isSupabaseConfigured) {
         const { error } = await supabase.from("products").delete().eq("id", productId);
         if (error) throw error;
-        fetchAllData();
-        safeAlert("Product deleted successfully from Supabase!", "success");
+        fetch(`/api/products/${productId}`, {
+          method: "DELETE"
+        }).catch(() => {});
+        safeAlert("Product removed!", "success");
       } else {
         const res = await fetch(`/api/products/${productId}`, {
           method: "DELETE"
         });
         if (res.ok) {
-          fetchAllData();
-          safeAlert("Product deleted successfully!", "success");
+          safeAlert("Product removed!", "success");
         }
       }
     } catch (err: any) {
@@ -2628,8 +2662,6 @@ export default function App() {
       );
 
       if (isRlsError && isSupabaseConfigured) {
-        // UI memory fallback
-        setProducts(prev => prev.filter(p => p.id !== productId));
         fetch(`/api/products/${productId}`, {
           method: "DELETE"
         }).catch(e => console.warn("Local sync failed:", e));

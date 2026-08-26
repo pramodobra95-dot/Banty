@@ -101,42 +101,55 @@ export default function ProductDetailPage({
     }
   };
 
-  // Find product by slug
+  // Find product by slug with instant cache/local resolution (<1ms)
   useEffect(() => {
     const fetchProduct = async () => {
+      // 1. Try finding in local props first
+      const matchedLocal = initialProducts.find(
+        p => p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slugLower || p.id.toLowerCase() === slugLower
+      );
+
+      if (matchedLocal) {
+        setProduct(matchedLocal);
+        setSelectedImage(matchedLocal.images?.[0] || "");
+        setLoading(false);
+        fetch(`/api/products/${matchedLocal.id}/view`, { method: "POST" }).catch(() => {});
+        return;
+      }
+
+      // 2. Try checking localStorage cache
+      try {
+        if (typeof window !== "undefined" && window.localStorage) {
+          const cachedRaw = localStorage.getItem("cache_products");
+          if (cachedRaw) {
+            const cachedList: Product[] = JSON.parse(cachedRaw);
+            const matchedCached = cachedList.find(
+              p => p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slugLower || p.id.toLowerCase() === slugLower
+            );
+            if (matchedCached) {
+              setProduct(matchedCached);
+              setSelectedImage(matchedCached.images?.[0] || "");
+              setLoading(false);
+              return;
+            }
+          }
+        }
+      } catch (e) {}
+
+      // 3. Fallback: Query Supabase or local API if not in cache
       setLoading(true);
       try {
-        // Try finding locally first
-        const matchedLocal = initialProducts.find(
-          p => p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slugLower || p.id.toLowerCase() === slugLower
-        );
-
-        if (matchedLocal) {
-          setProduct(matchedLocal);
-          setSelectedImage(matchedLocal.images?.[0] || "");
-          setLoading(false);
-          // Increment views count dynamically
-          try {
-            await fetch(`/api/products/${matchedLocal.id}/view`, { method: "POST" });
-          } catch (e) {
-            console.warn("Could not log view count locally:", e);
-          }
-          return;
-        }
-
-        // Otherwise query Supabase directly to support real-time dynamic additions
         if (isSupabaseConfigured) {
           const { data, error } = await supabase
             .from("products")
             .select("*")
-            .filter("approved", "eq", true);
+            .eq("approved", true);
 
           if (!error && data) {
             const matchedDb = data.find(
               (p: any) => p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slugLower || p.id.toLowerCase() === slugLower
             );
             if (matchedDb) {
-              // Convert schema format if necessary
               const mappedProduct: Product = {
                 id: matchedDb.id,
                 name: matchedDb.name,

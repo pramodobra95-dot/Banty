@@ -120,13 +120,23 @@ export default function BlogsView({
       {selectedBlog ? (
         /* Blog Detail Reader view */
         <div className="max-w-3xl mx-auto space-y-6">
-          <button 
-            onClick={() => setSelectedBlog(null)}
-            className="inline-flex items-center gap-1.5 text-xs text-[#0066FF] font-bold hover:underline cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Sourcing Insights Catalog
-          </button>
+          {/* Breadcrumb List */}
+          <div className="flex items-center justify-between text-xs text-slate-400 font-semibold border-b border-slate-100 pb-3">
+            <button
+              onClick={() => setSelectedBlog(null)}
+              className="inline-flex items-center gap-1.5 text-[#0066FF] font-bold hover:underline cursor-pointer border-0 bg-transparent"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Blog Catalog
+            </button>
+            <div className="flex items-center gap-2">
+              <a href="/" className="hover:text-[#0066FF] transition-all">Home</a>
+              <span>&gt;</span>
+              <a href="/blog" onClick={(e) => { e.preventDefault(); setSelectedBlog(null); }} className="hover:text-[#0066FF] transition-all">Blog</a>
+              <span>&gt;</span>
+              <span className="text-slate-600 font-bold max-w-[150px] truncate">{selectedBlog.title}</span>
+            </div>
+          </div>
 
           <div className="space-y-4">
             <div className="flex items-center gap-2">
