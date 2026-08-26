@@ -35,113 +35,7 @@ const defaultCategories = [
   { id: "cat-ai", name: "AI Solutions", icon: "Brain", description: "Custom LLMs, customer support bots, data analytics, and automation algorithms.", productsCount: 1 },
 ];
 
-const defaultVendors = [
-  {
-    id: "ven-1",
-    companyName: "SaaSify Solutions Pvt Ltd",
-    name: "Rajesh Kumar",
-    logo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    gstNumber: "27AAAAA1111A1Z1",
-    panNumber: "AAAAA1111A",
-    website: "https://saasify.co.in",
-    businessCategory: "CRM & ERP Software",
-    productsOffered: ["cat-crm", "cat-erp", "cat-accounting"],
-    rating: 4.8,
-    location: "Mumbai, Maharashtra",
-    approved: true,
-    docVerified: true,
-    plan: "Gold",
-    productsCount: 3,
-    leadsCount: 14,
-    revenue: 450000,
-    viewsCount: 1250,
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: "ven-2",
-    companyName: "CloudConnect Telecom",
-    name: "Vikram Mehta",
-    logo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    gstNumber: "24BBBBB2222B2Z2",
-    panNumber: "BBBBB2222B",
-    website: "https://cloudconnect.net",
-    businessCategory: "Cloud Telephony & Contact Center",
-    productsOffered: ["cat-telephony", "cat-contact-center", "cat-whatsapp-api"],
-    rating: 4.6,
-    location: "Bengaluru, Karnataka",
-    approved: true,
-    docVerified: true,
-    plan: "Silver",
-    productsCount: 2,
-    leadsCount: 9,
-    revenue: 210000,
-    viewsCount: 890,
-    createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: "ven-3",
-    companyName: "Enterprise Systems India",
-    name: "Amit Patel",
-    logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    gstNumber: "29CCCCC3333C3Z3",
-    panNumber: "CCCCC3333C",
-    website: "https://entsystems.com",
-    businessCategory: "ERP & Accounting",
-    productsOffered: ["cat-erp", "cat-accounting"],
-    rating: 4.5,
-    location: "Delhi NCR",
-    approved: true,
-    docVerified: true,
-    plan: "Gold",
-    productsCount: 2,
-    leadsCount: 18,
-    revenue: 580000,
-    viewsCount: 1620,
-    createdAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: "ven-4",
-    companyName: "CyberShield IT Labs",
-    name: "Neha Sharma",
-    logo: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    gstNumber: "07DDDDD4444D4Z4",
-    panNumber: "DDDDD4444D",
-    website: "https://cybershieldlabs.com",
-    businessCategory: "Cyber Security & Cloud Hosting",
-    productsOffered: ["cat-security", "cat-aws", "cat-azure"],
-    rating: 4.9,
-    location: "Pune, Maharashtra",
-    approved: true,
-    docVerified: true,
-    plan: "Enterprise",
-    productsCount: 3,
-    leadsCount: 22,
-    revenue: 940000,
-    viewsCount: 2100,
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: "ven-pending",
-    companyName: "Aesthetic Business Software",
-    name: "Suresh Raina",
-    logo: "https://images.unsplash.com/photo-1542744094-3a31f103e35f?w=120&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    gstNumber: "27EEEEE5555E5Z5",
-    panNumber: "EEEEE5555E",
-    website: "https://aestheticbiz.com",
-    businessCategory: "AI Solutions",
-    productsOffered: ["cat-ai"],
-    rating: 3.5,
-    location: "Chennai, Tamil Nadu",
-    approved: false,
-    docVerified: false,
-    plan: "Free",
-    productsCount: 1,
-    leadsCount: 0,
-    revenue: 0,
-    viewsCount: 120,
-    createdAt: new Date().toISOString()
-  }
-];
+const defaultVendors: any[] = [];
 
 const defaultProducts = [
   {
@@ -350,31 +244,6 @@ const defaultProducts = [
     createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString()
   },
   {
-    id: "prod-pending",
-    name: "SmartBiz AI Agent Hub",
-    description: "Advanced AI conversational platform to handle inbound support calls, automate email replies, and qualify leads synchronously.",
-    images: [
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60"
-    ],
-    pricing: "₹15,000 / month",
-    features: [
-      "Multi-agent workflow orchestrator",
-      "Prebuilt CRM connectors",
-      "Natural-sounding speech synthesis"
-    ],
-    rating: 3.5,
-    category: "AI Solutions",
-    vendorId: "ven-pending",
-    vendorName: "Aesthetic Business Software",
-    isFeatured: false,
-    approved: false,
-    views: 120,
-    brochureUrl: "",
-    videoUrl: "",
-    faqs: [],
-    createdAt: new Date().toISOString()
-  },
-  {
     id: "prod-8",
     name: "Airtel Enterprise SIP Trunking",
     description: "Premium high-density voice connectivity solution for modern enterprises. Scalable digital SIP trunking with up to 1500 concurrent channels, customized geographical DID routing, localized failover protection, and extreme reliability.",
@@ -463,74 +332,7 @@ const defaultProducts = [
   }
 ];
 
-const defaultLeads = [
-  {
-    id: "lead-1",
-    title: "Requires Omnichannel CRM with WhatsApp API integration",
-    category: "CRM Software",
-    description: "We are an edtech company with 45 sales executives. We need a CRM that records lead source from Meta ads, triggers auto-WhatsApp followups, assigns leads in round-robin format, and logs telephone recordings. Must offer dashboard to review response speeds.",
-    budget: "₹50,000 - ₹80,000 per month",
-    companyName: "Zenith EduTech solutions",
-    contactName: "Siddharth Sen",
-    mobile: "+91 98765 43210",
-    email: "siddharth@zenithedu.com",
-    city: "Delhi",
-    timeline: "Within 15 Days",
-    status: "Assigned",
-    bant: {
-      budget: "Sufficient - ₹60k to ₹100k approved budget",
-      authority: "Decision maker - Head of Operations & Sales",
-      need: "High - Facing 40% lead leakage in manual workflows",
-      timeline: "Immediate - Needs deployment before July cohort starts"
-    },
-    assignedVendors: ["ven-1", "ven-2"],
-    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: "lead-2",
-    title: "Cloud Telephony Setup & SIP Trunking for Call Center",
-    category: "Cloud Telephony",
-    description: "Looking for an enterprise grade cloud telephony provider to setup an outbound call center with 25 agents. Need high call connectivity ratios, DID numbers in Maharashtra, and softphone integration for laptop users.",
-    budget: "₹25,000 - ₹40,000 per month",
-    companyName: "CareSource Health Systems",
-    contactName: "Dr. Ananya Roy",
-    mobile: "+91 87654 32109",
-    email: "ananya.roy@caresource.in",
-    city: "Mumbai",
-    timeline: "1 Month",
-    status: "Submitted",
-    bant: {
-      budget: "Approved budget up to ₹40k/mo",
-      authority: "Evaluating committee of IT Director & Admin Manager",
-      need: "Critical for managing incoming patients patient desk support",
-      timeline: "Target launch by middle of next month"
-    },
-    assignedVendors: [],
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: "lead-3",
-    title: "ERP & Accounting Migration from Manual Tally",
-    category: "ERP Software",
-    description: "We run a manufacturing factory of automotive components. Need to move from offline custom databases and manual ledgers to Odoo or SAP. Need Inventory Management, Bills of Materials, Invoicing, Purchase Orders and GST compliance.",
-    budget: "₹2,000,000 - ₹5,000,000 (one-time setup)",
-    companyName: "Autoforge Components Pvt Ltd",
-    contactName: "Ganesh Hegde",
-    mobile: "+91 76543 21098",
-    email: "g.hegde@autoforge.com",
-    city: "Pune",
-    timeline: "2-3 Months",
-    status: "Proposal Received",
-    bant: {
-      budget: "Board approved one-time capital up to ₹40L",
-      authority: "Managing Director and CFO are the final approvers",
-      need: "Inventory leakages and audit remarks are forcing digital ERP",
-      timeline: "Target implementation complete within 90 days"
-    },
-    assignedVendors: ["ven-3"],
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  }
-];
+const defaultLeads: any[] = [];
 
 const defaultBlogs = [
   {
@@ -738,16 +540,6 @@ const defaultCurrentUser = {
 
 const defaultUsers = [
   {
-    id: "user-demo",
-    name: "Prabhu Deva",
-    email: "pramodobra95@gmail.com",
-    companyName: "Deva Consulting & Co",
-    mobile: "+91 94444 12345",
-    city: "Chennai",
-    role: "buyer",
-    createdAt: new Date().toISOString()
-  },
-  {
     id: "user-admin",
     name: "Admin Master",
     email: "info.bouuz@gmail.com",
@@ -755,16 +547,6 @@ const defaultUsers = [
     mobile: "+91 98765 43210",
     city: "Mumbai",
     role: "admin",
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "user-vendor",
-    name: "Rajesh Kumar",
-    email: "vendor@bantconfirm.com",
-    companyName: "SaaSify Solutions Pvt Ltd",
-    mobile: "+91 91111 22222",
-    city: "Mumbai",
-    role: "vendor",
     createdAt: new Date().toISOString()
   }
 ];
@@ -904,11 +686,7 @@ let db: {
   settings: defaultSettings,
   notifications: defaultNotifications,
   currentUser: defaultCurrentUser,
-  leadAssignments: [
-    { id: "la-1", leadId: "lead-1", vendorId: "ven-1", status: "Contacted", purchased: true, createdAt: new Date().toISOString() },
-    { id: "la-2", leadId: "lead-1", vendorId: "ven-2", status: "New", purchased: true, createdAt: new Date().toISOString() },
-    { id: "la-3", leadId: "lead-3", vendorId: "ven-3", status: "Proposal Sent", purchased: true, createdAt: new Date().toISOString() },
-  ],
+  leadAssignments: [],
   users: defaultUsers,
   trustedVendors: defaultTrustedVendors,
   marketingBanners: defaultMarketingBanners,
