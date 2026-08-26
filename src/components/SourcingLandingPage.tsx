@@ -98,6 +98,19 @@ export default function SourcingLandingPage({
 
   return (
     <div className="bg-slate-50 min-h-screen font-sans">
+      {/* BREADCRUMB NAVIGATION */}
+      <div className="bg-slate-900 border-b border-slate-800/80 px-4 py-3 text-xs">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-2 text-slate-400 font-semibold">
+          <a href="/" className="hover:text-white transition-colors">Home</a>
+          <span>&gt;</span>
+          <a href="/services" className="hover:text-white transition-colors">Sourcing Services</a>
+          <span>&gt;</span>
+          <a href={`/category/${encodeURIComponent(product.name)}`} className="hover:text-white transition-colors">{product.name}</a>
+          <span>&gt;</span>
+          <span className="text-blue-400 font-bold">{location.name} Regional Desk</span>
+        </div>
+      </div>
+
       {/* 1. LOCALIZED HERO BANNER */}
       <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 py-16 md:py-24 px-4 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/30 via-transparent to-transparent opacity-75" />

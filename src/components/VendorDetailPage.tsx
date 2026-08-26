@@ -104,14 +104,24 @@ export default function VendorDetailPage({ vendors, products, onPostLead, curren
     <div className="bg-slate-50 min-h-screen py-8 text-left">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
-        {/* Back Button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#0066FF] transition-all bg-white py-2 px-4 rounded-xl border border-slate-200 cursor-pointer shadow-xs"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Directory
-        </button>
+        {/* Navigation Breadcrumb */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#0066FF] transition-all bg-white py-2 px-4 rounded-xl border border-slate-200 cursor-pointer shadow-xs"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Directory
+          </button>
+
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+            <a href="/" className="hover:text-[#0066FF] transition-all">Home</a>
+            <span>&gt;</span>
+            <a href="/vendors" className="hover:text-[#0066FF] transition-all">Vendors</a>
+            <span>&gt;</span>
+            <span className="text-slate-600 font-bold max-w-[180px] truncate">{vendor.companyName}</span>
+          </div>
+        </div>
 
         {/* Company Header Card */}
         <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row gap-6 md:items-center justify-between">
