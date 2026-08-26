@@ -991,25 +991,48 @@ export default function AdminPanel({
       setProductImageProgress(prev => ({ ...prev, [slot]: 60 }));
 
       let finalUrl = "";
+      let uploadedSuccessfully = false;
+
       if (isSupabaseConfigured) {
-        // 2. Upload to Supabase Storage
         const fileExt = "webp";
         const fileName = `${Date.now()}-${slot}.${fileExt}`;
-        const filePath = `products/${fileName}`;
 
-        const { data, error } = await supabase.storage
-          .from("public")
-          .upload(filePath, webpBlob, { cacheControl: "3600", upsert: true });
+        // Attempt bucket upload strategy across available buckets (products -> public -> marketing)
+        const bucketCandidates = [
+          { bucket: "products", path: fileName },
+          { bucket: "public", path: `products/${fileName}` },
+          { bucket: "marketing", path: `products/${fileName}` }
+        ];
 
-        if (error) {
-          throw error;
+        let lastStorageErr: any = null;
+
+        for (const candidate of bucketCandidates) {
+          try {
+            const { data, error } = await supabase.storage
+              .from(candidate.bucket)
+              .upload(candidate.path, webpBlob, { cacheControl: "3600", upsert: true });
+
+            if (!error && data) {
+              const { data: { publicUrl } } = supabase.storage
+                .from(candidate.bucket)
+                .getPublicUrl(candidate.path);
+
+              if (publicUrl) {
+                finalUrl = publicUrl;
+                uploadedSuccessfully = true;
+                break;
+              }
+            } else if (error) {
+              lastStorageErr = error;
+            }
+          } catch (candidateErr) {
+            lastStorageErr = candidateErr;
+          }
         }
 
-        if (data) {
-          const { data: { publicUrl } } = supabase.storage
-            .from("public")
-            .getPublicUrl(filePath);
-          finalUrl = publicUrl;
+        if (!uploadedSuccessfully) {
+          console.warn("Supabase storage upload failed across buckets, falling back to persistent Base64 DataURL:", lastStorageErr);
+          finalUrl = await blobToDataURL(webpBlob);
         }
       } else {
         // Fallback to local DataURL if Supabase is offline/unconfigured
