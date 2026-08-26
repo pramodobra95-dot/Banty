@@ -63,3 +63,35 @@ USING (
 -- 4. VERIFY CURRENT USERS SETTINGS
 -- Execute this query in your Supabase SQL editor to verify metadata roles:
 -- SELECT id, email, raw_user_meta_data->>'role' as assigned_role, created_at FROM auth.users;
+
+
+-- 5. STORAGE BUCKETS AND STORAGE RLS POLICIES FOR PRODUCT CATALOG
+-- Run this block in Supabase SQL editor to ensure storage buckets and access policies are created.
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES
+  ('products', 'products', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif']),
+  ('public', 'public', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif']),
+  ('marketing', 'marketing', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'])
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public Storage Read Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Storage Insert Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Storage Update Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Storage Delete Access" ON storage.objects;
+
+CREATE POLICY "Public Storage Read Access"
+  ON storage.objects FOR SELECT
+  USING (bucket_id IN ('products', 'public', 'marketing'));
+
+CREATE POLICY "Public Storage Insert Access"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id IN ('products', 'public', 'marketing'));
+
+CREATE POLICY "Public Storage Update Access"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id IN ('products', 'public', 'marketing'));
+
+CREATE POLICY "Public Storage Delete Access"
+  ON storage.objects FOR DELETE
+  USING (bucket_id IN ('products', 'public', 'marketing'));

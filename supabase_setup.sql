@@ -408,3 +408,37 @@ INSERT INTO public.marketing_banners (id, title, image_url, button_text, redirec
 ('mb-1', 'Double Your Sales Close Rate with BANT Qualification', 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80', 'Post Sourcing Request', '/post', 1, true, '2026-01-01', '2027-12-31', NOW(), NOW()),
 ('mb-2', 'Join BANTConfirm elite network of certified IT Sourcing partners', 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&auto=format&fit=crop&q=80', 'Become Sourcing Partner', '/become-partner', 2, true, '2026-01-01', '2027-12-31', NOW(), NOW()),
 ('mb-3', 'Explore Premium Certified Enterprise Software Solutions', 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80', 'Browse Categories', '/categories', 3, true, '2026-01-01', '2027-12-31', NOW(), NOW());
+
+-- ====================================================================
+-- SUPABASE STORAGE BUCKETS & POLICIES CONFIGURATION
+-- ====================================================================
+
+-- 1. Create Storage Buckets for Products, Public Assets, and Marketing
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES
+  ('products', 'products', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif']),
+  ('public', 'public', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif']),
+  ('marketing', 'marketing', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'])
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- 2. Storage RLS Policies
+DROP POLICY IF EXISTS "Public Storage Read Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Storage Insert Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Storage Update Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Storage Delete Access" ON storage.objects;
+
+CREATE POLICY "Public Storage Read Access"
+  ON storage.objects FOR SELECT
+  USING (bucket_id IN ('products', 'public', 'marketing'));
+
+CREATE POLICY "Public Storage Insert Access"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id IN ('products', 'public', 'marketing'));
+
+CREATE POLICY "Public Storage Update Access"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id IN ('products', 'public', 'marketing'));
+
+CREATE POLICY "Public Storage Delete Access"
+  ON storage.objects FOR DELETE
+  USING (bucket_id IN ('products', 'public', 'marketing'));

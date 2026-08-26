@@ -5,7 +5,7 @@
       "name": "CRM Software",
       "icon": "Users",
       "description": "Manage customer relationships, sales pipelines, and support tickets in one centralized hub.",
-      "productsCount": 3
+      "productsCount": 4
     },
     {
       "id": "cat-erp",
@@ -470,6 +470,33 @@
       ],
       "createdAt": "2026-07-07T17:37:08.785Z",
       "showSimilar": true
+    },
+    {
+      "id": "prod-1787731147235",
+      "name": "Test Product Storage Slots",
+      "description": "Testing slot 1, 2, and 3 storage URLs",
+      "images": [
+        "https://placeholder-storage.supabase.co/storage/v1/object/public/products/123-1.webp",
+        "https://placeholder-storage.supabase.co/storage/v1/object/public/products/replaced-slot2.webp",
+        "https://placeholder-storage.supabase.co/storage/v1/object/public/products/123-3.webp"
+      ],
+      "pricing": "Custom Pricing",
+      "features": [
+        "Feature 1",
+        "Feature 2"
+      ],
+      "brochureUrl": "#",
+      "videoUrl": "",
+      "faqs": [],
+      "rating": 4,
+      "category": "CRM Software",
+      "vendorId": "ven-1",
+      "vendorName": "SaaSify Solutions Pvt Ltd",
+      "isFeatured": false,
+      "approved": true,
+      "views": 0,
+      "createdAt": "2026-08-26T07:59:07.235Z",
+      "showSimilar": false
     }
   ],
   "leads": [],
