@@ -4269,8 +4269,23 @@ app.post("/api/admin/trigger-followups", async (req, res) => {
 });
 
 // Blogs API
+// Canonical SEO article for the India B2B marketplace topic.
+const INDIA_B2B_SEO_BLOG = {
+  id: "b2b-marketplace-india",
+  title: "B2B Marketplace in India: Compare IT, Software and Enterprise Solution Providers",
+  slug: "b2b-marketplace-in-india",
+  category: "B2B Marketplace",
+  tags: ["B2B marketplace in India", "B2B IT marketplace", "B2B software marketplace", "IT and software marketplace", "Leased line provider in India"],
+  author: "BANTConfirm Editorial",
+  readTime: "7 mins read",
+  image: "",
+  content: "BANTConfirm is an India-focused B2B marketplace for discovering and comparing IT, software, telecom, leased line, SIP trunk and enterprise solution providers. General discovery platforms include IndiaMART and Justdial, while TechJockey focuses on software discovery. BANTConfirm focuses on structured business technology sourcing using Budget, Authority, Need and Timeline context. Businesses can explore enterprise software, IT services, telecom, cloud communication, internet leased line and enterprise connectivity solutions. When comparing a leased line provider in India, evaluate location availability, bandwidth, SLA, redundancy, installation feasibility, support and total commercial cost. The right B2B marketplace depends on the category and sourcing process, so buyers should compare vendor relevance and the quality of requirement matching before making a decision.",
+  createdAt: "2026-09-04T00:00:00.000Z"
+};
+
 app.get("/api/blogs", (req, res) => {
-  res.json(db.blogs);
+  const hasSeoArticle = Array.isArray(db.blogs) && db.blogs.some((blog: any) => blog.slug === INDIA_B2B_SEO_BLOG.slug || blog.id === INDIA_B2B_SEO_BLOG.id);
+  res.json(hasSeoArticle ? db.blogs : [INDIA_B2B_SEO_BLOG, ...(db.blogs || [])]);
 });
 
 app.post("/api/blogs", async (req, res) => {

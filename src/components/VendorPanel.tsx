@@ -61,14 +61,14 @@ export default function VendorPanel({
   const [registerForm, setRegisterForm] = useState({
     companyName: currentUser?.companyName || "",
     name: currentUser?.name || "",
-    logo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&auto=format&fit=crop",
-    gstNumber: "27AAAAA1111A1Z1",
-    panNumber: "AAAAA1111A",
-    website: "https://saasify.co.in",
-    businessCategory: "CRM Software",
-    productsOffered: ["CRM Software", "ERP Software"],
-    location: "Mumbai, Maharashtra",
-    plan: "Gold" as const
+    logo: currentUser?.avatar || "",
+    gstNumber: "",
+    panNumber: "",
+    website: "",
+    businessCategory: "",
+    productsOffered: [],
+    location: currentUser?.city || "",
+    plan: "Free" as const
   });
 
   const [registerSuccess, setRegisterSuccess] = useState(false);
@@ -79,16 +79,16 @@ export default function VendorPanel({
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
-    category: "CRM Software",
-    pricing: "₹1,500 / user / month onwards",
-    images: ["https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop"],
-    featuresText: "Feature 1\nFeature 2\nFeature 3",
-    brochureUrl: "#",
+    category: categories[0]?.name || "",
+    pricing: "",
+    images: [],
+    featuresText: "",
+    brochureUrl: "",
     videoUrl: "",
-    faqQuestion1: "Is training included?",
-    faqAnswer1: "Yes, we provide 4 hours of complimentary training.",
-    faqQuestion2: "Are updates included?",
-    faqAnswer2: "All security patches and platform updates are free."
+    faqQuestion1: "",
+    faqAnswer1: "",
+    faqQuestion2: "",
+    faqAnswer2: ""
   });
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
@@ -122,8 +122,8 @@ export default function VendorPanel({
       faqs,
       brochureUrl: productForm.brochureUrl,
       videoUrl: productForm.videoUrl,
-      vendorId: vendorProfile?.id || "ven-1",
-      vendorName: vendorProfile?.companyName || "SaaSify Solutions Pvt Ltd"
+      vendorId: vendorProfile?.id,
+      vendorName: vendorProfile?.companyName || ""
     };
 
     if (editingProduct) {
@@ -137,16 +137,16 @@ export default function VendorPanel({
     setProductForm({
       name: "",
       description: "",
-      category: "CRM Software",
-      pricing: "₹1,500 / user / month onwards",
-      images: ["https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop"],
-      featuresText: "Feature 1\nFeature 2\nFeature 3",
-      brochureUrl: "#",
+      category: categories[0]?.name || "",
+      pricing: "",
+      images: [],
+      featuresText: "",
+      brochureUrl: "",
       videoUrl: "",
-      faqQuestion1: "Is training included?",
-      faqAnswer1: "Yes, we provide 4 hours of complimentary training.",
-      faqQuestion2: "Are updates included?",
-      faqAnswer2: "All security patches and platform updates are free."
+      faqQuestion1: "",
+      faqAnswer1: "",
+      faqQuestion2: "",
+      faqAnswer2: ""
     });
   };
 
@@ -177,37 +177,47 @@ export default function VendorPanel({
     { name: "Enterprise Plan", price: "₹24,999 / month", limit: "Unlimited Products", perks: ["All capabilities unlocked", "Dedicated account audit rep", "Pre-qualified direct telephone bridges"] }
   ];
 
-  // Helper stats based on vendor profile
-  const activeVendor = vendorProfile || {
-    id: "ven-1",
-    companyName: "SaaSify Solutions Pvt Ltd",
-    name: "Rajesh Kumar",
-    logo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=120&auto=format&fit=crop&q=60",
-    rating: 4.8,
-    approved: true,
-    plan: "Gold",
-    productsCount: 3,
-    leadsCount: 14,
-    revenue: 450000,
-    viewsCount: 1250
-  };
-
-  const myProducts = products.filter(p => p.vendorId === activeVendor.id);
-
-  // Mock charts data using recharts
-  const leadsTrendData = [
-    { name: "Week 1", Leads: 2, Revenue: 150000 },
-    { name: "Week 2", Leads: 5, Revenue: 180000 },
-    { name: "Week 3", Leads: 4, Revenue: 210000 },
-    { name: "Week 4", Leads: 8, Revenue: 450000 }
-  ];
+  // Every vendor view is scoped to the authenticated vendor only.
+  const activeVendor = vendorProfile;
+  const myProducts = activeVendor ? products.filter(p => p.vendorId === activeVendor.id) : [];
+  const myLeads = activeVendor ? leads.filter((lead: any) =>
+    lead.vendorId === activeVendor.id ||
+    lead.assignedVendorId === activeVendor.id ||
+    lead.claimedByVendorId === activeVendor.id ||
+    (Array.isArray(lead.vendorIds) && lead.vendorIds.includes(activeVendor.id)) ||
+    lead.isPurchasedByMe === true
+  ) : [];
 
   const leadStatusPieData = [
-    { name: "New Leads", value: 4, color: "#0066FF" },
-    { name: "Contacted", value: 5, color: "#9333EA" },
-    { name: "Proposal Sent", value: 3, color: "#F97316" },
-    { name: "Closed Won", value: 2, color: "#22C55E" }
+    { name: "New Leads", value: myLeads.filter((l: any) => !l.assignmentStatus || l.assignmentStatus === "New").length, color: "#0066FF" },
+    { name: "Contacted", value: myLeads.filter((l: any) => l.assignmentStatus === "Contacted" || l.status === "Vendor Contacted").length, color: "#9333EA" },
+    { name: "Proposal Sent", value: myLeads.filter((l: any) => l.assignmentStatus === "Proposal Sent" || l.status === "Proposal Received").length, color: "#F97316" },
+    { name: "Closed Won", value: myLeads.filter((l: any) => l.assignmentStatus === "Closed Won" || l.status === "Closed Won").length, color: "#22C55E" }
   ];
+
+  const leadsTrendData = (() => {
+    const weeks = Array.from({ length: 4 }, (_, i) => {
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      end.setDate(end.getDate() - i * 7);
+      const start = new Date(end);
+      start.setDate(start.getDate() - 6);
+      const weekLeads = myLeads.filter((lead: any) => {
+        const date = new Date(lead.createdAt || lead.updatedAt || 0);
+        return !Number.isNaN(date.getTime()) && date >= start && date <= end;
+      });
+      const revenue = weekLeads
+        .filter((lead: any) => lead.assignmentStatus === "Closed Won" || lead.status === "Closed Won")
+        .reduce((sum: number, lead: any) => sum + Number(lead.dealValue || lead.value || 0), 0);
+      return { name: `Week ${4 - i}`, Leads: weekLeads.length, Revenue: revenue };
+    });
+    return weeks.reverse();
+  })();
+
+  const closedWonValue = myLeads
+    .filter((lead: any) => lead.assignmentStatus === "Closed Won" || lead.status === "Closed Won")
+    .reduce((sum: number, lead: any) => sum + Number(lead.dealValue || lead.value || 0), 0);
+  const productViews = myProducts.reduce((sum: number, product: any) => sum + Number(product.views || 0), 0);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
@@ -216,24 +226,24 @@ export default function VendorPanel({
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between border-b border-slate-200 pb-4 mb-6 gap-4">
         <div className="flex items-center space-x-3.5">
           <img 
-            src={activeVendor.logo} 
-            alt={activeVendor.companyName} 
+            src={activeVendor?.logo || ""} 
+            alt={activeVendor?.companyName || "Vendor"} 
             className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
             referrerPolicy="no-referrer"
           />
           <div>
-            <h2 className="text-xl font-black text-slate-900">{activeVendor.companyName}</h2>
+            <h2 className="text-xl font-black text-slate-900">{activeVendor?.companyName || "Vendor Account"}</h2>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-              <span>Account Lead: <strong>{activeVendor.name}</strong></span>
+              <span>Account Lead: <strong>{activeVendor?.name || currentUser?.name || "Vendor"}</strong></span>
               <span>•</span>
-              <span className="bg-yellow-400 text-slate-950 font-bold px-1.5 py-0.5 rounded text-[10px] uppercase">{activeVendor.plan} Tier Partner</span>
+              <span className="bg-yellow-400 text-slate-950 font-bold px-1.5 py-0.5 rounded text-[10px] uppercase">{activeVendor?.plan || "Free"} Tier Partner</span>
             </p>
           </div>
         </div>
 
         {/* Tab switchers */}
         <div className="flex bg-slate-100 p-1 rounded-lg self-start text-xs font-semibold overflow-x-auto max-w-full whitespace-nowrap scrollbar-none">
-          {activeVendor.approved ? (
+          {activeVendor?.approved ? (
             <>
               <button
                 onClick={() => setActiveTab('dashboard')}
@@ -277,7 +287,7 @@ export default function VendorPanel({
       </div>
 
       {/* REGISTRATION GUARD PANEL */}
-      {!activeVendor.approved && activeTab === 'register' && (
+      {(!activeVendor || !activeVendor.approved) && activeTab === 'register' && (
         <div className="bg-white rounded-xl border border-slate-200 p-6 max-w-3xl mx-auto shadow-xs space-y-6">
           <div className="text-center space-y-2 border-b border-slate-100 pb-4">
             <span className="text-[#0066FF] font-bold text-xs uppercase tracking-wider">Become a Certified Solution Partner</span>
@@ -387,7 +397,7 @@ export default function VendorPanel({
       )}
 
       {/* 1. DASHBOARD ANALYTICS TAB */}
-      {activeVendor.approved && activeTab === 'dashboard' && (
+      {activeVendor?.approved && activeTab === 'dashboard' && (
         <div className="space-y-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -398,26 +408,26 @@ export default function VendorPanel({
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
               <span className="text-[10px] text-slate-400 font-bold uppercase block">BANT Leads Purchased</span>
-              <p className="text-xl font-black text-slate-800 mt-1">{activeVendor.leadsCount || 0}</p>
+              <p className="text-xl font-black text-slate-800 mt-1">{myLeads.length}</p>
               <div className="text-[10px] text-green-600 font-semibold mt-1.5 flex items-center gap-0.5">
                 <TrendingUp className="w-3 h-3" />
-                <span>84% conversion potential</span>
+                <span>Actual leads currently linked to your account</span>
               </div>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Closed Won Value</span>
-              <p className="text-xl font-black text-slate-800 mt-1">₹{activeVendor.revenue ? activeVendor.revenue.toLocaleString() : "4,50,000"}</p>
+              <p className="text-xl font-black text-slate-800 mt-1">₹{closedWonValue.toLocaleString()}</p>
               <div className="text-[10px] text-slate-400 mt-1.5">B2B Deal contract value</div>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Product Search Views</span>
-              <p className="text-xl font-black text-slate-800 mt-1">{activeVendor.viewsCount || 1250}</p>
+              <p className="text-xl font-black text-slate-800 mt-1">{productViews}</p>
               <div className="text-[10px] text-slate-400 mt-1.5">Unique buyer searches</div>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs bg-[#0066FF]/5 border-[#0066FF]/20">
               <span className="text-[10px] text-[#0066FF] font-bold uppercase block">Lead Bid Credit Balance</span>
-              <p className="text-xl font-black text-slate-800 mt-1">8 Credits</p>
-              <div className="text-[10px] text-slate-500 mt-1.5">Claims ₹1,500/lead</div>
+              <p className="text-xl font-black text-slate-800 mt-1">0 Credits</p>
+              <div className="text-[10px] text-slate-500 mt-1.5">Credits will appear from actual purchases</div>
             </div>
           </div>
 
