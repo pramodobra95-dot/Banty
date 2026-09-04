@@ -2788,7 +2788,10 @@ app.post("/api/auth/register-partner", async (req, res) => {
 
 // API - Sign Up
 app.post("/api/auth/signup", async (req, res) => {
-  const { name, email, companyName, mobile, city, role } = req.body;
+  const { name, email, companyName, mobile, city, role, password } = req.body;
+  if (!email || !password || String(password).length < 6) {
+    return res.status(400).json({ success: false, error: "A valid email and password of at least 6 characters are required." });
+  }
   const emailLower = email ? email.trim().toLowerCase() : "";
   let assignedRole = role || "buyer";
   if (emailLower === "admin@bantconfirm.com" || emailLower === "info.bouuz@gmail.com" || emailLower === "info.bouuz@gmail.co" || emailLower === "pramodobra95@gmail.com") {
@@ -2805,6 +2808,7 @@ app.post("/api/auth/signup", async (req, res) => {
     gstNumber: "27AAAAA1111A1Z1",
     businessType: assignedRole === "vendor" ? "Solution Provider" : assignedRole === "admin" ? "Marketplace Administrator" : "SME Services",
     role: assignedRole,
+    password: String(password),
     createdAt: new Date().toISOString()
   };
   
@@ -2837,6 +2841,11 @@ app.post("/api/auth/signup", async (req, res) => {
       createdAt: newUser.createdAt
     };
     db.vendors.push(newVen);
+    newUser.vendorId = newVen.id;
+    newVen.email = emailLower;
+    newVen.mobile = newUser.mobile;
+    newVen.approved = false;
+    newVen.docVerified = false;
     
     if (pgPool) {
       try {
