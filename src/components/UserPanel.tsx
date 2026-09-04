@@ -60,9 +60,9 @@ export default function UserPanel({
     mobile: currentUser?.mobile || "",
     email: currentUser?.email || "",
     city: currentUser?.city || "",
-    gstNumber: currentUser?.gstNumber || "33ABCDE1234F1Z0",
-    businessType: currentUser?.businessType || "SME Services",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop",
+    gstNumber: currentUser?.gstNumber || "",
+    businessType: currentUser?.businessType || "",
+    avatar: currentUser?.avatar || "",
     emailNotifications: currentUser?.emailNotifications !== false
   });
 
@@ -150,8 +150,13 @@ export default function UserPanel({
   // Saved/Wishlist products list
   const savedProducts = products.filter(p => wishlist.includes(p.id));
 
-  // Filter leads posted by the user's company (or simulate)
-  const myLeads = leads; // Showing leads for demonstration purposes with full states
+  // Show only requirements actually created by the authenticated user.
+  const myLeads = leads.filter((lead: any) => {
+    const userId = currentUser?.id;
+    const email = String(currentUser?.email || "").toLowerCase();
+    return (userId && (lead.userId === userId || lead.createdBy === userId || lead.buyerId === userId)) ||
+      (email && String(lead.email || lead.contactEmail || "").toLowerCase() === email);
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
@@ -160,7 +165,7 @@ export default function UserPanel({
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between border-b border-slate-200 pb-4 mb-6 gap-4">
         <div>
           <h2 className="text-xl font-black text-slate-900">Procurement & Sourcing Panel</h2>
-          <p className="text-xs text-slate-500 mt-1">Simulated corporate account: <span className="font-semibold text-[#0066FF]">{currentUser?.name} ({currentUser?.companyName})</span></p>
+          <p className="text-xs text-slate-500 mt-1">Your corporate account: <span className="font-semibold text-[#0066FF]">{currentUser?.name} ({currentUser?.companyName})</span></p>
         </div>
 
         <div className="flex bg-slate-100 p-1 rounded-lg self-start text-xs font-semibold overflow-x-auto max-w-full whitespace-nowrap scrollbar-none">
