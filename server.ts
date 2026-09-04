@@ -1730,13 +1730,13 @@ Subject: ${subject}
 `);
 
   if (isSimulation) {
-    logEmailDispatch(to, subject, htmlContent, "Simulation (Offline/Key Missing)", { info: "Resend API Key is not configured. Running in local simulation mode." });
-    return { success: true, simulated: true };
+    logEmailDispatch(to, subject, htmlContent, "Failed (Resend Key Missing)", { info: "RESEND_API_KEY is not available to this runtime." });
+    return { success: false, simulated: false, error: "RESEND_API_KEY is not configured" };
   }
 
   try {
     const response = await resend.emails.send({
-      from: "BANTConfirm <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "BANTConfirm <onboarding@resend.dev>",
       to: [to],
       subject: subject,
       html: htmlContent
@@ -1749,9 +1749,9 @@ Subject: ${subject}
                                 (err.message && err.message.toLowerCase().includes("not allowed"));
                                 
       if (isValidationError) {
-        console.log("[Resend Sandbox Validation Bypass] Recipient email is not verified in free trial / onboarding domain. Simulating successful sandbox dispatch.");
-        logEmailDispatch(to, subject, htmlContent, "Simulation (Sandbox Validation Bypass)", err);
-        return { success: true, simulated: true };
+        console.error("[Resend Validation Error] Delivery was rejected by Resend.");
+        logEmailDispatch(to, subject, htmlContent, "Failed (Resend Validation)", err);
+        return { success: false, simulated: false, error: err };
       }
 
       console.warn("[Resend SDK returned error]:", err);
@@ -1770,9 +1770,9 @@ Subject: ${subject}
     );
 
     if (isValidationError) {
-      console.log("[Resend Sandbox Validation Bypass] Caught validation error in try/catch block. Simulating successful sandbox dispatch.");
-      logEmailDispatch(to, subject, htmlContent, "Simulation (Sandbox Validation Bypass)", error);
-      return { success: true, simulated: true };
+      console.error("[Resend Validation Error] Delivery was rejected by Resend.");
+      logEmailDispatch(to, subject, htmlContent, "Failed (Resend Validation)", error);
+      return { success: false, simulated: false, error };
     }
 
     console.error("[Resend Dispatch Failure] Direct delivery error:", error);
