@@ -1932,10 +1932,12 @@ export default function App() {
               id: vendorId,
               companyName: signUpCompany,
               name: signUpName,
+              email: signUpEmail,
+              mobile: signUpMobile,
               logo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=150",
-              gstNumber: "27GSTMOCK12345",
-              panNumber: "PANMOCK1234",
-              website: "https://example.com",
+              gstNumber: "",
+              panNumber: "",
+              website: "",
               businessCategory: "General",
               productsOffered: [],
               rating: 5.0,
@@ -1949,7 +1951,8 @@ export default function App() {
               viewsCount: 0,
               createdAt: new Date().toISOString()
             };
-            await supabase.from("vendors").insert([vendorRecord]);
+            const { error: vendorError } = await supabase.from("vendors").insert([vendorRecord]);
+            if (vendorError) console.warn("Vendor profile will continue via backend onboarding:", vendorError);
             userObj.vendorId = vendorId as any;
             
             await supabase.auth.updateUser({
