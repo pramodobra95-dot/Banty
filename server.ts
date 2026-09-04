@@ -2793,6 +2793,10 @@ app.post("/api/auth/signup", async (req, res) => {
     return res.status(400).json({ success: false, error: "A valid email and password of at least 6 characters are required." });
   }
   const emailLower = email ? email.trim().toLowerCase() : "";
+  if (!db.users) db.users = [];
+  if (db.users.some((u: any) => String(u.email || "").trim().toLowerCase() === emailLower)) {
+    return res.status(409).json({ success: false, error: "An account already exists with this email. Please sign in instead." });
+  }
   let assignedRole = role || "buyer";
   if (emailLower === "admin@bantconfirm.com" || emailLower === "info.bouuz@gmail.com" || emailLower === "info.bouuz@gmail.co" || emailLower === "pramodobra95@gmail.com") {
     assignedRole = "admin";
