@@ -1730,13 +1730,13 @@ Subject: ${subject}
 `);
 
   if (isSimulation) {
-    logEmailDispatch(to, subject, htmlContent, "Simulation (Offline/Key Missing)", { info: "Resend API Key is not configured. Running in local simulation mode." });
-    return { success: true, simulated: true };
+    logEmailDispatch(to, subject, htmlContent, "Failed (Resend Key Missing)", { info: "RESEND_API_KEY is not available to this runtime." });
+    return { success: false, simulated: false, error: "RESEND_API_KEY is not configured" };
   }
 
   try {
     const response = await resend.emails.send({
-      from: "BANTConfirm <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "BANTConfirm <onboarding@resend.dev>",
       to: [to],
       subject: subject,
       html: htmlContent
@@ -1749,9 +1749,9 @@ Subject: ${subject}
                                 (err.message && err.message.toLowerCase().includes("not allowed"));
                                 
       if (isValidationError) {
-        console.log("[Resend Sandbox Validation Bypass] Recipient email is not verified in free trial / onboarding domain. Simulating successful sandbox dispatch.");
-        logEmailDispatch(to, subject, htmlContent, "Simulation (Sandbox Validation Bypass)", err);
-        return { success: true, simulated: true };
+        console.error("[Resend Validation Error] Delivery was rejected by Resend.");
+        logEmailDispatch(to, subject, htmlContent, "Failed (Resend Validation)", err);
+        return { success: false, simulated: false, error: err };
       }
 
       console.warn("[Resend SDK returned error]:", err);
@@ -1770,9 +1770,9 @@ Subject: ${subject}
     );
 
     if (isValidationError) {
-      console.log("[Resend Sandbox Validation Bypass] Caught validation error in try/catch block. Simulating successful sandbox dispatch.");
-      logEmailDispatch(to, subject, htmlContent, "Simulation (Sandbox Validation Bypass)", error);
-      return { success: true, simulated: true };
+      console.error("[Resend Validation Error] Delivery was rejected by Resend.");
+      logEmailDispatch(to, subject, htmlContent, "Failed (Resend Validation)", error);
+      return { success: false, simulated: false, error };
     }
 
     console.error("[Resend Dispatch Failure] Direct delivery error:", error);
@@ -2407,91 +2407,91 @@ app.get("/api/auth/me", (req, res) => {
 
 // API - Log in
 app.post("/api/auth/login", async (req, res) => {
-  const { email, password, role } = req.body;
+  const emailLower = String(req.body.email || "").trim().toLowerCase();
+  const password = String(req.body.password || "");
+  if (!emailLower || !password) {
+    return res.status(400).json({ success: false, error: "Email and password are required." });
+  }
+
   let user: any = null;
-  
-  if (pgPool && email) {
+  if (pgPool) {
     try {
-      const q = await pgPool.query('SELECT * FROM profiles WHERE LOWER(email) = $1 LIMIT 1', [email.trim().toLowerCase()]);
-      if (q.rows.length > 0) {
-        const row = q.rows[0];
-        user = {
-          id: row.id,
-          name: row.name,
-          email: row.email,
-          companyName: row.companyName,
-          mobile: row.mobile,
-          city: row.city,
-          role: row.role,
-          createdAt: row.createdAt
-        };
-      }
+      const q = await pgPool.query('SELECT * FROM profiles WHERE LOWER(email) = $1 LIMIT 1', [emailLower]);
+      if (q.rows.length > 0) user = q.rows[0];
     } catch (err) {
       console.error("Error finding user during login:", err);
     }
   }
-
+  if (!user && db.users) {
+    user = db.users.find((u: any) => String(u.email || "").trim().toLowerCase() === emailLower) || null;
+  }
   if (!user) {
-    if (email === "buyer@bantconfirm.com" || role === "buyer") {
-      user = {
-        id: "user-demo",
-        name: "Anand Sen",
-        email: "anand@zenithedu.com",
-        companyName: "Zenith Education Ltd",
-        mobile: "+91 98888 77777",
-        city: "Mumbai",
-        gstNumber: "27AAAAA1111A1Z1",
-        businessType: "SME Services",
-        role: "buyer"
-      };
-    } else if (email === "vendor@bantconfirm.com" || role === "vendor") {
-      user = {
-        id: "ven-1",
-        name: "Rajesh Kumar",
-        email: "rajesh@saasify.co.in",
-        companyName: "SaaSify Solutions Pvt Ltd",
-        mobile: "+91 99999 88888",
-        city: "Mumbai",
-        gstNumber: "27AAAAA1111A1Z1",
-        businessType: "Solution Provider",
-        role: "vendor",
-        vendorId: "ven-1"
-      };
-    } else if (email === "admin@bantconfirm.com" || email === "info.bouuz@gmail.com" || email === "info.bouuz@gmail.co" || email === "pramodobra95@gmail.com" || role === "admin") {
-      user = {
-        id: "admin-demo",
-        name: "Prabhu Deva",
-        email: email || "info.bouuz@gmail.co",
-        companyName: "BANTConfirm HQ",
-        mobile: "+91 94444 12345",
-        city: "Chennai",
-        gstNumber: "33ABCDE1234F1Z0",
-        businessType: "Marketplace Administrator",
-        role: "admin"
-      };
-    } else {
-      // Normal registration fallback
-      user = {
-        id: "user-" + Math.random().toString(36).substr(2, 9),
-        name: email ? email.split("@")[0] : "Enterprise Sourcing Professional",
-        email: email || "sourcing@enterprise.in",
-        companyName: "Guest Enterprise Ltd",
-        mobile: "+91 90000 00000",
-        city: "Mumbai",
-        gstNumber: "27AAAAA1111A1Z1",
-        businessType: "SME Services",
-        role: role || "buyer"
-      };
+    return res.status(401).json({ success: false, error: "No account was found with this email. Please register first." });
+  }
+  if (user.password && user.password !== password) {
+    return res.status(401).json({ success: false, error: "Incorrect email or password." });
+  }
+
+  if (user.role === "vendor") {
+    let verified = user.emailVerified === true;
+    if (!verified && db.partnerRegistrations) {
+      const registration = db.partnerRegistrations.find((r: any) => String(r.email || "").trim().toLowerCase() === emailLower);
+      verified = registration?.emailVerified === true;
+    }
+    if (!verified) {
+      return res.status(403).json({
+        success: false,
+        error: "Please confirm your vendor email before logging in.",
+        requiresEmailVerification: true
+      });
     }
   }
-  
+
   db.currentUser = user;
-  if (!db.users) db.users = [];
-  if (!db.users.some((u: any) => u.email === user.email || u.id === user.id)) {
-    db.users.push(user);
-  }
   saveDb();
   res.json({ success: true, user });
+});
+
+// Vendor email verification before first login
+const makeVendorVerificationToken = () => Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + "-" + Math.random().toString(36).slice(2);
+const sendVendorEmailVerification = async (name: string, companyName: string, email: string, token: string) => {
+  const baseUrl = (process.env.APP_URL || "https://www.bantconfirm.com").replace(/\/$/, "");
+  const verifyUrl = baseUrl + "/api/auth/verify-vendor-email?token=" + encodeURIComponent(token);
+  const html = getEmailTemplate(
+    "Confirm your Vendor Email",
+    "<h1 style=\"color:#0066FF;\">Confirm your email address</h1>" +
+    "<p>Hi <strong>" + name + "</strong>,</p>" +
+    "<p>Thank you for registering <strong>" + companyName + "</strong> as a BANTConfirm Solution Provider.</p>" +
+    "<p>Please confirm this email address before your first login.</p>" +
+    "<p style=\"margin:24px 0;\"><a href=\"" + verifyUrl + "\" style=\"display:inline-block;background:#0066FF;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700;\">Confirm Email & Activate Login</a></p>" +
+    "<p>If you did not create this vendor account, you can ignore this email.</p>",
+    "Confirm Email & Activate Login",
+    verifyUrl
+  );
+  return sendResendEmail(email, "Confirm your BANTConfirm vendor email", html);
+};
+
+app.get("/api/auth/verify-vendor-email", async (req, res) => {
+  const token = String(req.query.token || "");
+  if (!token) return res.status(400).send("Invalid verification link.");
+
+  let user: any = (db.users || []).find((u: any) => u.emailVerificationToken === token && u.role === "vendor");
+  if (!user) return res.status(404).send("This verification link is invalid or has expired.");
+
+  user.emailVerified = true;
+  delete user.emailVerificationToken;
+
+  if (db.partnerRegistrations) {
+    const registration = db.partnerRegistrations.find((r: any) => String(r.email || "").trim().toLowerCase() === String(user.email || "").trim().toLowerCase());
+    if (registration) {
+      registration.emailVerified = true;
+      delete registration.emailVerificationToken;
+    }
+  }
+  saveDb();
+
+  const loginUrl = (process.env.APP_URL || "https://www.bantconfirm.com").replace(/\/$/, "") + "/login";
+  res.send(`<!doctype html><html><head><title>Email Confirmed | BANTConfirm</title></head><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:48px;text-align:center;color:#0f172a"><div style="max-width:520px;margin:auto;background:#fff;padding:32px;border-radius:16px;border:1px solid #e2e8f0"><h1>Email confirmed successfully</h1><p>Your vendor account is now active for login.</p><a href="${loginUrl}" style="display:inline-block;background:#0066FF;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Login with your Email & Password</a></div></body></html>`);
 });
 
 // API - Register Partner (With Auto-Onboarding & Emails)
@@ -2506,6 +2506,7 @@ app.post("/api/auth/register-partner", async (req, res) => {
   const emailLower = email ? email.trim().toLowerCase() : "";
   const vendorId = `ven-${Date.now()}`;
   const userId = `user-${Date.now()}`;
+  const emailVerificationToken = makeVendorVerificationToken();
 
   // Find existing user/vendor by email
   let existingUser: any = null;
@@ -2556,7 +2557,9 @@ app.post("/api/auth/register-partner", async (req, res) => {
     createdAt: existingReg ? existingReg.createdAt : createdAt,
     status: "Pending", // Pending, Contacted, Under Review, Approved, Rejected
     source: "PartnerForm",
-    userId: existingUser ? existingUser.id : null
+    userId: existingUser ? existingUser.id : null,
+    emailVerified: existingReg?.emailVerified || false,
+    emailVerificationToken
   };
 
   // Update memory partnerRegistrations
@@ -2697,6 +2700,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
       role: "vendor",
       vendorId: vendorId,
       password: tempPassword,
+      emailVerified: false,
+      emailVerificationToken,
       createdAt: createdAt
     };
     if (!db.users) db.users = [];
@@ -2711,11 +2716,12 @@ app.post("/api/auth/register-partner", async (req, res) => {
     }
   }
 
-  // Safely attempt confirmation email sending without breaking registration flow
+  // Send verification email. The vendor must confirm the email before first login.
+  let emailDispatch: any = null;
   try {
-    await sendVendorWelcomeEmail(name, companyName, emailLower);
+    emailDispatch = await sendVendorEmailVerification(name, companyName, emailLower, emailVerificationToken);
   } catch (emailErr) {
-    console.error("[Email Failure Non-Blocking Log] Vendor confirmation email sending failed:", emailErr);
+    console.error("[Vendor Verification Email Failure]", emailErr);
   }
 
   // Send alert to Admin (wrapped in try-catch so it doesn't break flow)
@@ -2783,7 +2789,7 @@ app.post("/api/auth/register-partner", async (req, res) => {
   db.currentUser = demoUser;
   saveDb();
 
-  res.status(201).json({ success: true, user: demoUser, vendor: demoVen });
+  res.status(201).json({ success: true, user: demoUser, vendor: demoVen, emailSent: !!emailDispatch?.success, emailSimulated: !!emailDispatch?.simulated, requiresEmailVerification: true, message: "Registration received. Please confirm your email before logging in." });
 });
 
 // API - Sign Up
