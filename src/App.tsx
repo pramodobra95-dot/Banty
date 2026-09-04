@@ -2123,7 +2123,7 @@ export default function App() {
   const handlePostLead = async (leadData: any) => {
     try {
       const leadId = `lead-${Date.now()}`;
-      const payload = { ...leadData, id: leadId };
+      const payload = { ...leadData, id: leadId, userId: currentUser?.id || null };
 
       let localSuccess = false;
       try {
@@ -2161,7 +2161,7 @@ export default function App() {
                 email: emailLower,
                 companyName: leadData.companyName || "",
                 mobile: leadData.mobile || "",
-                city: leadData.city || "Delhi",
+                city: leadData.city || "",
                 role: "buyer",
                 createdAt: new Date().toISOString()
               };
@@ -2177,7 +2177,7 @@ export default function App() {
 
         const supabaseLead = {
           id: leadId,
-          title: leadData.title || "Software Sourcing Requirement",
+          title: leadData.title || "",
           category: leadData.category,
           description: leadData.description,
           budget: leadData.budget,
@@ -2190,7 +2190,7 @@ export default function App() {
           status: "Submitted",
           bant: {
             budget: leadData.budget || "",
-            authority: leadData.bantAuthority || "Yes",
+            authority: leadData.bantAuthority || "",
             need: leadData.bantNeed || leadData.description || "",
             timeline: leadData.timeline || ""
           },
