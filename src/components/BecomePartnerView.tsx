@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { 
   Users, CheckCircle, HelpCircle, Mail, Shield, Award, 
-  Sparkles, Building, Phone, Laptop, ArrowRight, User, AlertCircle, FileText
+  Sparkles, Building, Phone, Laptop, ArrowRight, User, AlertCircle, FileText, Lock
 } from "lucide-react";
 
 interface BecomePartnerViewProps {
@@ -10,11 +10,11 @@ interface BecomePartnerViewProps {
 }
 
 export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }: BecomePartnerViewProps) {
-  // Form fields
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [location, setLocation] = useState("");
   const [products, setProducts] = useState("");
   const [description, setDescription] = useState("");
@@ -26,8 +26,12 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !companyName || !mobile || !email || !products || !description) {
-      alert("Please fill in all the required fields.");
+    if (!name || !companyName || !mobile || !email || !password || !products || !description) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+    if (password.length < 6) {
+      alert("Please create a password with at least 6 characters.");
       return;
     }
 
@@ -35,13 +39,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
     
     try {
       const payload = {
-        name,
-        companyName,
-        mobile,
-        email,
-        location,
-        products,
-        description
+        name, companyName, mobile, email, password, location, products, description
       };
 
       const res = await fetch("/api/auth/register-partner", {
@@ -50,14 +48,13 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
         body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json();
+      if (res.ok && data.success) {
         setSimulatedVendor(data.vendor);
         setShowEmailSimulator(true);
-        // Call the parent callback to update current user state
         onRegisterSuccess(data);
       } else {
-        alert("Registration failed. Please try again.");
+        alert(data.error || "Registration failed. Please try again.");
       }
     } catch (err) {
       console.error(err);
@@ -68,7 +65,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
   };
 
   const handleProceedToProductListing = () => {
-    // Navigate to vendor-panel on the products tab to upload their products
+    setShowEmailSimulator(false);
     onNavigateToTab("vendor-panel", "products");
   };
 
