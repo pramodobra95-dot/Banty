@@ -1,10 +1,11 @@
 -- BANTConfirm / Supabase Security Advisor remediation
 -- Run in Supabase SQL Editor against the affected project.
+-- Review first: this script does not touch application data.
 
 begin;
 
--- Harden every overload of public.handle_admin_role_assignment.
--- Removes implicit PUBLIC execution and pins SECURITY DEFINER search_path.
+-- 1) Harden every overload of the flagged SECURITY DEFINER function.
+-- Remove implicit PUBLIC execution and pin its search_path.
 do $$
 declare fn record;
 begin
@@ -23,9 +24,8 @@ begin
   end loop;
 end $$;
 
--- Categories are public catalogue data. Allow read-only access only.
-alter table if exists public.categories enable row level security;
-
+-- 2) Remove only categories policies that are literally unconditional
+-- ("USING (true)" and/or "WITH CHECK (true)"). Do not drop other policies.
 do $$
 declare pol record;
 begin
@@ -33,22 +33,41 @@ begin
     for pol in
       select policyname
       from pg_policies
-      where schemaname = 'public' and tablename = 'categories'
+      where schemaname = 'public'
+        and tablename = 'categories'
+        and (
+          coalesce(qual, '') in ('true', '(true)')
+          or coalesce(with_check, '') in ('true', '(true)')
+        )
     loop
       execute format('drop policy if exists %I on public.categories', pol.policyname);
     end loop;
+  end if;
+end $$;
 
-    create policy "public_read_categories"
-      on public.categories
-      for select
-      to anon, authenticated
-      using (id is not null);
+-- Keep public catalogue reads working. This policy is created only if no
+-- anonymous/authenticated SELECT policy remains.
+do $$
+declare has_read_policy boolean;
+begin
+  if to_regclass('public.categories') is not null then
+    select exists(
+      select 1
+      from pg_policies
+      where schemaname = 'public'
+        and tablename = 'categories'
+        and cmd in ('SELECT', 'ALL')
+    ) into has_read_policy;
+
+    if not has_read_policy then
+      execute 'create policy "public_read_categories" on public.categories for select to anon, authenticated using (id is not null)';
+    end if;
   end if;
 end $$;
 
 commit;
 
--- Verification
+-- Verification queries
 select p.oid::regprocedure as function_signature,
        p.proconfig,
        has_function_privilege('anon', p.oid, 'EXECUTE') as anon_can_execute
