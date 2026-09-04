@@ -94,7 +94,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
               Join the Alliance: Partner Registration
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Complete this application to register and instantly access the Product Sourcing Portal.
+              Create your own login credentials, submit your company details, receive confirmation by email, and start managing your Vendor Dashboard.
             </p>
           </div>
 
@@ -169,6 +169,25 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
                   />
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Create Your Login Password *
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="Minimum 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">Use this password to log in to your Vendor Dashboard and manage products.</p>
             </div>
 
             <div>
