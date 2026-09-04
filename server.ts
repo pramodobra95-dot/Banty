@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import compression from "compression";
 import dotenv from "dotenv";
+import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { GoogleGenAI, Type } from "@google/genai";
 import pg from "pg";
 const { Pool } = pg;
@@ -1238,6 +1239,17 @@ async function initPostgres() {
       )
     `);
 
+    // Persist vendor credentials and verification state in PostgreSQL so Vercel/serverless
+    // instances do not lose confirmation tokens between registration, email click and login.
+    try {
+      await client.query("ALTER TABLE vendor_registrations ADD COLUMN IF NOT EXISTS password_hash TEXT");
+      await client.query("ALTER TABLE vendor_registrations ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(128)");
+      await client.query("CREATE UNIQUE INDEX IF NOT EXISTS vendor_registrations_email_unique_idx ON vendor_registrations (LOWER(email))");
+      await client.query("CREATE UNIQUE INDEX IF NOT EXISTS vendor_registrations_token_unique_idx ON vendor_registrations (email_verification_token) WHERE email_verification_token IS NOT NULL");
+    } catch (err) {
+      console.warn("Could not add vendor authentication columns:", err);
+    }
+
     // Ensure leads table has title, city, userId, sourceUrl, productName columns
     try {
       await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS title VARCHAR(200)");
@@ -2400,6 +2412,17 @@ const sendLeadStatusChangeAlert = async (lead: any, newStatus: string) => {
 
 
 // Setup Server endpoints
+// Safe production diagnostics: exposes configuration state only, never secrets.
+app.get("/api/system/email-status", async (_req, res) => {
+  const resendConfigured = !!getResendClient();
+  res.json({
+    resendConfigured,
+    senderConfigured: !!process.env.RESEND_FROM_EMAIL,
+    appUrlConfigured: !!process.env.APP_URL,
+    databaseConfigured: !!pgPool
+  });
+});
+
 // API - Get current session
 app.get("/api/auth/me", (req, res) => {
   res.json(db.currentUser);
@@ -2411,6 +2434,61 @@ app.post("/api/auth/login", async (req, res) => {
   const password = String(req.body.password || "");
   if (!emailLower || !password) {
     return res.status(400).json({ success: false, error: "Email and password are required." });
+  }
+
+  // Vendors use vendor_registrations as the persistent source of authentication and
+  // verification state. This is essential on Vercel where local JSON files are ephemeral.
+  let vendorRegistration: any = null;
+  if (pgPool) {
+    try {
+      const q = await pgPool.query(
+        'SELECT * FROM vendor_registrations WHERE LOWER(email) = $1 LIMIT 1',
+        [emailLower]
+      );
+      vendorRegistration = q.rows[0] || null;
+    } catch (err) {
+      console.error("Error finding vendor registration during login:", err);
+    }
+  }
+  if (!vendorRegistration && db.vendor_registrations) {
+    vendorRegistration = db.vendor_registrations.find((v: any) => String(v.email || "").trim().toLowerCase() === emailLower) || null;
+  }
+
+  if (vendorRegistration) {
+    const storedHash = vendorRegistration.password_hash || vendorRegistration.passwordHash;
+    if (!verifyVendorPassword(password, storedHash)) {
+      return res.status(401).json({ success: false, error: "Incorrect email or password." });
+    }
+    if (vendorRegistration.email_verified !== true && vendorRegistration.emailVerified !== true) {
+      return res.status(403).json({
+        success: false,
+        error: "Please confirm your vendor email before logging in.",
+        requiresEmailVerification: true
+      });
+    }
+
+    let profile: any = null;
+    if (pgPool) {
+      try {
+        const p = await pgPool.query('SELECT * FROM profiles WHERE LOWER(email) = $1 LIMIT 1', [emailLower]);
+        profile = p.rows[0] || null;
+      } catch (err) {
+        console.error("Error finding vendor profile during login:", err);
+      }
+    }
+    const user = {
+      ...(profile || {}),
+      id: profile?.id || vendorRegistration.user_id || vendorRegistration.id,
+      name: profile?.name || vendorRegistration.full_name,
+      email: emailLower,
+      companyName: profile?.companyName || profile?.companyname || vendorRegistration.company_name,
+      mobile: profile?.mobile || vendorRegistration.mobile || "",
+      role: "vendor",
+      vendorId: vendorRegistration.vendor_id || vendorRegistration.id
+    };
+    db.currentUser = user;
+    saveDb();
+    return res.json({ success: true, user });
   }
 
   let user: any = null;
@@ -2432,28 +2510,26 @@ app.post("/api/auth/login", async (req, res) => {
     return res.status(401).json({ success: false, error: "Incorrect email or password." });
   }
 
-  if (user.role === "vendor") {
-    let verified = user.emailVerified === true;
-    if (!verified && db.partnerRegistrations) {
-      const registration = db.partnerRegistrations.find((r: any) => String(r.email || "").trim().toLowerCase() === emailLower);
-      verified = registration?.emailVerified === true;
-    }
-    if (!verified) {
-      return res.status(403).json({
-        success: false,
-        error: "Please confirm your vendor email before logging in.",
-        requiresEmailVerification: true
-      });
-    }
-  }
-
   db.currentUser = user;
   saveDb();
   res.json({ success: true, user });
 });
 
 // Vendor email verification before first login
-const makeVendorVerificationToken = () => Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + "-" + Math.random().toString(36).slice(2);
+const makeVendorVerificationToken = () => randomBytes(32).toString("hex");
+const hashVendorPassword = (password: string) => {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
+  return salt + ":" + hash;
+};
+const verifyVendorPassword = (password: string, storedHash?: string) => {
+  if (!storedHash || !storedHash.includes(":")) return false;
+  const [salt, stored] = storedHash.split(":");
+  const calculated = scryptSync(password, salt, 64).toString("hex");
+  const a = Buffer.from(stored, "hex");
+  const b = Buffer.from(calculated, "hex");
+  return a.length === b.length && timingSafeEqual(a, b);
+};
 const sendVendorEmailVerification = async (name: string, companyName: string, email: string, token: string) => {
   const baseUrl = (process.env.APP_URL || "https://www.bantconfirm.com").replace(/\/$/, "");
   const verifyUrl = baseUrl + "/api/auth/verify-vendor-email?token=" + encodeURIComponent(token);
@@ -2475,14 +2551,54 @@ app.get("/api/auth/verify-vendor-email", async (req, res) => {
   const token = String(req.query.token || "");
   if (!token) return res.status(400).send("Invalid verification link.");
 
-  let user: any = (db.users || []).find((u: any) => u.emailVerificationToken === token && u.role === "vendor");
-  if (!user) return res.status(404).send("This verification link is invalid or has expired.");
+  let emailLower = "";
+  let found = false;
 
-  user.emailVerified = true;
-  delete user.emailVerificationToken;
+  if (pgPool) {
+    try {
+      const q = await pgPool.query(
+        'SELECT * FROM vendor_registrations WHERE email_verification_token = $1 LIMIT 1',
+        [token]
+      );
+      const registration = q.rows[0];
+      if (registration) {
+        emailLower = String(registration.email || "").trim().toLowerCase();
+        await pgPool.query(
+          'UPDATE vendor_registrations SET email_verified = true, email_verification_token = NULL WHERE id = $1',
+          [registration.id]
+        );
+        found = true;
+      }
+    } catch (err) {
+      console.error("Error verifying vendor email in PostgreSQL:", err);
+    }
+  }
+
+  const memoryUser: any = (db.users || []).find((u: any) => u.emailVerificationToken === token && u.role === "vendor");
+  if (memoryUser) {
+    emailLower = String(memoryUser.email || "").trim().toLowerCase();
+    memoryUser.emailVerified = true;
+    delete memoryUser.emailVerificationToken;
+    found = true;
+  }
+  if (db.vendor_registrations) {
+    const memoryRegistration = db.vendor_registrations.find((v: any) =>
+      v.email_verification_token === token || v.emailVerificationToken === token
+    );
+    if (memoryRegistration) {
+      emailLower = emailLower || String(memoryRegistration.email || "").trim().toLowerCase();
+      memoryRegistration.email_verified = true;
+      memoryRegistration.emailVerified = true;
+      delete memoryRegistration.email_verification_token;
+      delete memoryRegistration.emailVerificationToken;
+      found = true;
+    }
+  }
+
+  if (!found) return res.status(404).send("This verification link is invalid, expired, or has already been used.");
 
   if (db.partnerRegistrations) {
-    const registration = db.partnerRegistrations.find((r: any) => String(r.email || "").trim().toLowerCase() === String(user.email || "").trim().toLowerCase());
+    const registration = db.partnerRegistrations.find((r: any) => String(r.email || "").trim().toLowerCase() === emailLower);
     if (registration) {
       registration.emailVerified = true;
       delete registration.emailVerificationToken;
@@ -2491,7 +2607,7 @@ app.get("/api/auth/verify-vendor-email", async (req, res) => {
   saveDb();
 
   const loginUrl = (process.env.APP_URL || "https://www.bantconfirm.com").replace(/\/$/, "") + "/login";
-  res.send(`<!doctype html><html><head><title>Email Confirmed | BANTConfirm</title></head><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:48px;text-align:center;color:#0f172a"><div style="max-width:520px;margin:auto;background:#fff;padding:32px;border-radius:16px;border:1px solid #e2e8f0"><h1>Email confirmed successfully</h1><p>Your vendor account is now active for login.</p><a href="${loginUrl}" style="display:inline-block;background:#0066FF;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Login with your Email & Password</a></div></body></html>`);
+  res.send(`<!doctype html><html><head><title>Email Confirmed | BANTConfirm</title></head><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:48px;text-align:center;color:#0f172a"><div style="max-width:520px;margin:auto;background:#fff;padding:32px;border-radius:16px;border:1px solid #e2e8f0"><h1>Email confirmed successfully</h1><p>Your vendor account is now active. You can now log in using the email and password you created during registration.</p><a href="${loginUrl}" style="display:inline-block;background:#0066FF;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Login with your Email & Password</a></div></body></html>`);
 });
 
 // API - Register Partner (With Auto-Onboarding & Emails)
@@ -2586,6 +2702,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
     description: registrationEntry.description,
     status: "Pending",
     email_verified: false,
+    email_verification_token: emailVerificationToken,
+    password_hash: hashVendorPassword(String(password)),
     created_at: registrationEntry.createdAt
   };
   db.vendor_registrations.push(vendorRegEntry);
@@ -2626,8 +2744,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
 
     try {
       await pgPool.query(
-        `INSERT INTO vendor_registrations (id, full_name, company_name, mobile, email, products, description, status, email_verified, created_at, location)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        `INSERT INTO vendor_registrations (id, full_name, company_name, mobile, email, products, description, status, email_verified, email_verification_token, password_hash, created_at, location)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
          ON CONFLICT (id) DO UPDATE SET
            full_name = EXCLUDED.full_name,
            company_name = EXCLUDED.company_name,
@@ -2635,6 +2753,9 @@ app.post("/api/auth/register-partner", async (req, res) => {
            products = EXCLUDED.products,
            description = EXCLUDED.description,
            status = EXCLUDED.status,
+           email_verified = EXCLUDED.email_verified,
+           email_verification_token = EXCLUDED.email_verification_token,
+           password_hash = EXCLUDED.password_hash,
            location = EXCLUDED.location`,
         [
           vendorRegEntry.id,
@@ -2646,6 +2767,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
           vendorRegEntry.description,
           vendorRegEntry.status,
           vendorRegEntry.email_verified,
+          vendorRegEntry.email_verification_token,
+          vendorRegEntry.password_hash,
           vendorRegEntry.created_at,
           vendorRegEntry.location
         ]
@@ -2786,10 +2909,19 @@ app.post("/api/auth/register-partner", async (req, res) => {
     createdAt: createdAt
   };
 
-  db.currentUser = demoUser;
+  // Do not create a logged-in session before email verification.
   saveDb();
 
-  res.status(201).json({ success: true, user: demoUser, vendor: demoVen, emailSent: !!emailDispatch?.success, emailSimulated: !!emailDispatch?.simulated, requiresEmailVerification: true, message: "Registration received. Please confirm your email before logging in." });
+  if (!emailDispatch?.success) {
+    return res.status(502).json({
+      success: false,
+      emailSent: false,
+      requiresEmailVerification: true,
+      error: "Registration was saved, but the confirmation email could not be delivered. Please check email configuration and retry verification."
+    });
+  }
+
+  res.status(201).json({ success: true, user: demoUser, vendor: demoVen, emailSent: true, requiresEmailVerification: true, message: "Confirmation email sent. Please check your inbox and confirm your email before logging in." });
 });
 
 // API - Sign Up

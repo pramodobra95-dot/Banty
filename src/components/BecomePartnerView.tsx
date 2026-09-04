@@ -51,11 +51,12 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setRegistrationMessage(data.emailSimulated ? "Registration created, but email delivery is currently running in simulation mode because the email service is not configured." : "Confirmation email sent. Please check your inbox and click Confirm Email before logging in.");
+        setRegistrationMessage("Confirmation email sent successfully. Please check your inbox and click Confirm Email before logging in.");
         setSimulatedVendor(data.vendor);
-        setShowEmailSimulator(true);
+        setShowEmailSimulator(false);
       } else {
-        alert(data.error || "Registration failed. Please try again.");
+        setRegistrationMessage("");
+        alert(data.error || "Registration could not be completed. If your account was created but no email arrived, please contact support so the confirmation can be resent.");
       }
     } catch (err) {
       console.error(err);
