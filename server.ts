@@ -2412,6 +2412,17 @@ const sendLeadStatusChangeAlert = async (lead: any, newStatus: string) => {
 
 
 // Setup Server endpoints
+// Safe production diagnostics: exposes configuration state only, never secrets.
+app.get("/api/system/email-status", async (_req, res) => {
+  const resendConfigured = !!getResendClient();
+  res.json({
+    resendConfigured,
+    senderConfigured: !!process.env.RESEND_FROM_EMAIL,
+    appUrlConfigured: !!process.env.APP_URL,
+    databaseConfigured: !!pgPool
+  });
+});
+
 // API - Get current session
 app.get("/api/auth/me", (req, res) => {
   res.json(db.currentUser);
