@@ -6704,6 +6704,24 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
       },
       appType: "spa",
     });
+
+    // Serve the HTML shell before Vite's middleware. Vite's HTML transform adds
+    // /@vite/client, which attempts a WebSocket connection even though this
+    // Express-owned server intentionally has HMR disabled.
+    app.get("*", (req, res, next) => {
+      if (req.method !== "GET" || !req.headers.accept?.includes("text/html")) {
+        return next();
+      }
+
+      try {
+        res
+          .type("html")
+          .send(fs.readFileSync(resolveIndexHtml(), "utf-8"));
+      } catch (err) {
+        next(err);
+      }
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = resolveDistPath();
