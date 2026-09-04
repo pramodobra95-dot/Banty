@@ -2496,7 +2496,13 @@ app.post("/api/auth/login", async (req, res) => {
 
 // API - Register Partner (With Auto-Onboarding & Emails)
 app.post("/api/auth/register-partner", async (req, res) => {
-  const { name, companyName, mobile, email, location, products, description } = req.body;
+  const { name, companyName, mobile, email, password, location, products, description } = req.body;
+  if (!name?.trim() || !companyName?.trim() || !mobile?.trim() || !email?.trim() || !password || !products?.trim() || !description?.trim()) {
+    return res.status(400).json({ success: false, error: "Please complete all required registration fields." });
+  }
+  if (String(password).length < 6) {
+    return res.status(400).json({ success: false, error: "Password must be at least 6 characters." });
+  }
   const emailLower = email ? email.trim().toLowerCase() : "";
   const vendorId = `ven-${Date.now()}`;
   const userId = `user-${Date.now()}`;
@@ -2678,7 +2684,7 @@ app.post("/api/auth/register-partner", async (req, res) => {
   // Step 3 & 4 & 5: Server-side vendor account creation, confirmation email, & error safety
   let vendorAccountUser: any = existingUser;
   if (!vendorAccountUser && emailLower) {
-    const tempPassword = "BANT@" + Math.floor(1000 + Math.random() * 9000);
+    const tempPassword = String(password);
     vendorAccountUser = {
       id: userId,
       name: name || "Vendor Partner",
@@ -2707,7 +2713,7 @@ app.post("/api/auth/register-partner", async (req, res) => {
 
   // Safely attempt confirmation email sending without breaking registration flow
   try {
-    await sendBantConfirmWelcomeEmail(name, companyName, emailLower);
+    await sendVendorWelcomeEmail(name, companyName, emailLower);
   } catch (emailErr) {
     console.error("[Email Failure Non-Blocking Log] Vendor confirmation email sending failed:", emailErr);
   }
@@ -2763,8 +2769,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
     productsOffered: products ? [products] : [],
     rating: 5.0,
     location: "India",
-    approved: true, // Auto-approve the preview session so vendor panel demo works beautifully
-    docVerified: true,
+    approved: false, // New registrations remain pending verification while the account can complete its profile
+    docVerified: false,
     plan: "Free",
     productsCount: 0,
     leadsCount: 0,
@@ -2782,8 +2788,15 @@ app.post("/api/auth/register-partner", async (req, res) => {
 
 // API - Sign Up
 app.post("/api/auth/signup", async (req, res) => {
-  const { name, email, companyName, mobile, city, role } = req.body;
+  const { name, email, companyName, mobile, city, role, password } = req.body;
+  if (!email || !password || String(password).length < 6) {
+    return res.status(400).json({ success: false, error: "A valid email and password of at least 6 characters are required." });
+  }
   const emailLower = email ? email.trim().toLowerCase() : "";
+  if (!db.users) db.users = [];
+  if (db.users.some((u: any) => String(u.email || "").trim().toLowerCase() === emailLower)) {
+    return res.status(409).json({ success: false, error: "An account already exists with this email. Please sign in instead." });
+  }
   let assignedRole = role || "buyer";
   if (emailLower === "admin@bantconfirm.com" || emailLower === "info.bouuz@gmail.com" || emailLower === "info.bouuz@gmail.co" || emailLower === "pramodobra95@gmail.com") {
     assignedRole = "admin";
@@ -2799,6 +2812,7 @@ app.post("/api/auth/signup", async (req, res) => {
     gstNumber: "27AAAAA1111A1Z1",
     businessType: assignedRole === "vendor" ? "Solution Provider" : assignedRole === "admin" ? "Marketplace Administrator" : "SME Services",
     role: assignedRole,
+    password: String(password),
     createdAt: new Date().toISOString()
   };
   
@@ -2831,6 +2845,11 @@ app.post("/api/auth/signup", async (req, res) => {
       createdAt: newUser.createdAt
     };
     db.vendors.push(newVen);
+    newUser.vendorId = newVen.id;
+    newVen.email = emailLower;
+    newVen.mobile = newUser.mobile;
+    newVen.approved = false;
+    newVen.docVerified = false;
     
     if (pgPool) {
       try {

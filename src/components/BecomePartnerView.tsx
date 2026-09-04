@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { 
   Users, CheckCircle, HelpCircle, Mail, Shield, Award, 
-  Sparkles, Building, Phone, Laptop, ArrowRight, User, AlertCircle, FileText
+  Sparkles, Building, Phone, Laptop, ArrowRight, User, AlertCircle, FileText, Lock
 } from "lucide-react";
 
 interface BecomePartnerViewProps {
@@ -10,11 +10,11 @@ interface BecomePartnerViewProps {
 }
 
 export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }: BecomePartnerViewProps) {
-  // Form fields
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [location, setLocation] = useState("");
   const [products, setProducts] = useState("");
   const [description, setDescription] = useState("");
@@ -26,8 +26,12 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !companyName || !mobile || !email || !products || !description) {
-      alert("Please fill in all the required fields.");
+    if (!name || !companyName || !mobile || !email || !password || !products || !description) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+    if (password.length < 6) {
+      alert("Please create a password with at least 6 characters.");
       return;
     }
 
@@ -35,13 +39,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
     
     try {
       const payload = {
-        name,
-        companyName,
-        mobile,
-        email,
-        location,
-        products,
-        description
+        name, companyName, mobile, email, password, location, products, description
       };
 
       const res = await fetch("/api/auth/register-partner", {
@@ -50,14 +48,13 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
         body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json();
+      if (res.ok && data.success) {
         setSimulatedVendor(data.vendor);
         setShowEmailSimulator(true);
-        // Call the parent callback to update current user state
         onRegisterSuccess(data);
       } else {
-        alert("Registration failed. Please try again.");
+        alert(data.error || "Registration failed. Please try again.");
       }
     } catch (err) {
       console.error(err);
@@ -68,7 +65,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
   };
 
   const handleProceedToProductListing = () => {
-    // Navigate to vendor-panel on the products tab to upload their products
+    setShowEmailSimulator(false);
     onNavigateToTab("vendor-panel", "products");
   };
 
@@ -97,7 +94,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
               Join the Alliance: Partner Registration
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Complete this application to register and instantly access the Product Sourcing Portal.
+              Create your own login credentials, submit your company details, receive confirmation by email, and start managing your Vendor Dashboard.
             </p>
           </div>
 
@@ -172,6 +169,25 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
                   />
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Create Your Login Password *
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="Minimum 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">Use this password to log in to your Vendor Dashboard and manage products.</p>
             </div>
 
             <div>

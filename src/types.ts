@@ -33,6 +33,7 @@ export interface Vendor {
   createdAt: string;
   email?: string;
   mobile?: string;
+  onboardingStatus?: 'Pending' | 'Approved' | 'Rejected';
 }
 
 export interface ProductFAQ {

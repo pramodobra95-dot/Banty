@@ -52,7 +52,9 @@ CREATE TABLE public.vendors (
   "leadsCount" INTEGER DEFAULT 0,
   revenue NUMERIC(12, 2) DEFAULT 0.00,
   "viewsCount" INTEGER DEFAULT 0,
-  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  email TEXT,
+  mobile TEXT
 );
 
 -- ==========================================
@@ -442,3 +444,12 @@ CREATE POLICY "Public Storage Update Access"
 CREATE POLICY "Public Storage Delete Access"
   ON storage.objects FOR DELETE
   USING (bucket_id IN ('products', 'public', 'marketing'));
+
+
+-- ====================================================================
+-- VENDOR ONBOARDING COMPATIBILITY MIGRATION
+-- Safe to run on existing projects after the base schema has already been created.
+-- ====================================================================
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS mobile TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS vendors_email_unique_idx ON public.vendors (LOWER(email)) WHERE email IS NOT NULL;
