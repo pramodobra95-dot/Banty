@@ -6696,7 +6696,12 @@ Sitemap: https://www.bantconfirm.com/sitemap.xml`;
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        // This Express process owns the HTTP server; Vite cannot attach its
+        // HMR WebSocket in middleware mode, so avoid injecting a broken client.
+        hmr: false,
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
