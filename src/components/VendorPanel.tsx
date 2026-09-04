@@ -61,14 +61,14 @@ export default function VendorPanel({
   const [registerForm, setRegisterForm] = useState({
     companyName: currentUser?.companyName || "",
     name: currentUser?.name || "",
-    logo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&auto=format&fit=crop",
-    gstNumber: "27AAAAA1111A1Z1",
-    panNumber: "AAAAA1111A",
-    website: "https://saasify.co.in",
-    businessCategory: "CRM Software",
-    productsOffered: ["CRM Software", "ERP Software"],
-    location: "Mumbai, Maharashtra",
-    plan: "Gold" as const
+    logo: currentUser?.avatar || "",
+    gstNumber: "",
+    panNumber: "",
+    website: "",
+    businessCategory: "",
+    productsOffered: [],
+    location: currentUser?.city || "",
+    plan: "Free" as const
   });
 
   const [registerSuccess, setRegisterSuccess] = useState(false);
@@ -79,16 +79,16 @@ export default function VendorPanel({
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
-    category: "CRM Software",
-    pricing: "₹1,500 / user / month onwards",
-    images: ["https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop"],
-    featuresText: "Feature 1\nFeature 2\nFeature 3",
-    brochureUrl: "#",
+    category: categories[0]?.name || "",
+    pricing: "",
+    images: [],
+    featuresText: "",
+    brochureUrl: "",
     videoUrl: "",
-    faqQuestion1: "Is training included?",
-    faqAnswer1: "Yes, we provide 4 hours of complimentary training.",
-    faqQuestion2: "Are updates included?",
-    faqAnswer2: "All security patches and platform updates are free."
+    faqQuestion1: "",
+    faqAnswer1: "",
+    faqQuestion2: "",
+    faqAnswer2: ""
   });
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
@@ -122,8 +122,8 @@ export default function VendorPanel({
       faqs,
       brochureUrl: productForm.brochureUrl,
       videoUrl: productForm.videoUrl,
-      vendorId: vendorProfile?.id || "ven-1",
-      vendorName: vendorProfile?.companyName || "SaaSify Solutions Pvt Ltd"
+      vendorId: vendorProfile?.id,
+      vendorName: vendorProfile?.companyName || ""
     };
 
     if (editingProduct) {
@@ -137,16 +137,16 @@ export default function VendorPanel({
     setProductForm({
       name: "",
       description: "",
-      category: "CRM Software",
-      pricing: "₹1,500 / user / month onwards",
-      images: ["https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop"],
-      featuresText: "Feature 1\nFeature 2\nFeature 3",
-      brochureUrl: "#",
+      category: categories[0]?.name || "",
+      pricing: "",
+      images: [],
+      featuresText: "",
+      brochureUrl: "",
       videoUrl: "",
-      faqQuestion1: "Is training included?",
-      faqAnswer1: "Yes, we provide 4 hours of complimentary training.",
-      faqQuestion2: "Are updates included?",
-      faqAnswer2: "All security patches and platform updates are free."
+      faqQuestion1: "",
+      faqAnswer1: "",
+      faqQuestion2: "",
+      faqAnswer2: ""
     });
   };
 
