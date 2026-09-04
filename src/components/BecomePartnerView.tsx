@@ -23,6 +23,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
   const [showEmailSimulator, setShowEmailSimulator] = useState(false);
   const [simulatedVendor, setSimulatedVendor] = useState<any | null>(null);
   const [activeEmailTab, setActiveEmailTab] = useState<"confirmation" | "welcome">("confirmation");
+  const [registrationMessage, setRegistrationMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,9 +51,9 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
 
       const data = await res.json();
       if (res.ok && data.success) {
+        setRegistrationMessage(data.emailSimulated ? "Registration created, but email delivery is currently running in simulation mode because the email service is not configured." : "Confirmation email sent. Please check your inbox and click Confirm Email before logging in.");
         setSimulatedVendor(data.vendor);
         setShowEmailSimulator(true);
-        onRegisterSuccess(data);
       } else {
         alert(data.error || "Registration failed. Please try again.");
       }
@@ -76,6 +77,7 @@ export default function BecomePartnerView({ onRegisterSuccess, onNavigateToTab }
         <span className="text-blue-600 font-extrabold text-xs uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full">
           Join India's Most Pre-Qualified Enterprise Network
         </span>
+        {registrationMessage && <div className="max-w-xl mx-auto bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-3 text-sm font-semibold">{registrationMessage}</div>}
         <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
           Become a Certified Partner & Trust FAQ Center
         </h2>
