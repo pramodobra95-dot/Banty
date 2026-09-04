@@ -2494,6 +2494,26 @@ app.post("/api/auth/login", async (req, res) => {
   res.json({ success: true, user });
 });
 
+
+// Vendor email verification before first login
+const makeVendorVerificationToken = () => Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + "-" + Math.random().toString(36).slice(2);
+const sendVendorEmailVerification = async (name: string, companyName: string, email: string, token: string) => {
+  const baseUrl = (process.env.APP_URL || "https://www.bantconfirm.com").replace(/\/$/, "");
+  const verifyUrl = baseUrl + "/api/auth/verify-vendor-email?token=" + encodeURIComponent(token);
+  const html = getEmailTemplate(
+    "Confirm your Vendor Email",
+    "<h1 style=\"color:#0066FF;\">Confirm your email address</h1>" +
+    "<p>Hi <strong>" + name + "</strong>,</p>" +
+    "<p>Thank you for registering <strong>" + companyName + "</strong> as a BANTConfirm Solution Provider.</p>" +
+    "<p>Please confirm this email address before your first login.</p>" +
+    "<p style=\"margin:24px 0;\"><a href=\"" + verifyUrl + "\" style=\"display:inline-block;background:#0066FF;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700;\">Confirm Email & Activate Login</a></p>" +
+    "<p>If you did not create this vendor account, you can ignore this email.</p>",
+    "Confirm Email & Activate Login",
+    verifyUrl
+  );
+  return sendResendEmail(email, "Confirm your BANTConfirm vendor email", html);
+};
+
 // API - Register Partner (With Auto-Onboarding & Emails)
 app.post("/api/auth/register-partner", async (req, res) => {
   const { name, companyName, mobile, email, password, location, products, description } = req.body;
@@ -2506,6 +2526,7 @@ app.post("/api/auth/register-partner", async (req, res) => {
   const emailLower = email ? email.trim().toLowerCase() : "";
   const vendorId = `ven-${Date.now()}`;
   const userId = `user-${Date.now()}`;
+  const emailVerificationToken = makeVendorVerificationToken();
 
   // Find existing user/vendor by email
   let existingUser: any = null;
@@ -2556,7 +2577,9 @@ app.post("/api/auth/register-partner", async (req, res) => {
     createdAt: existingReg ? existingReg.createdAt : createdAt,
     status: "Pending", // Pending, Contacted, Under Review, Approved, Rejected
     source: "PartnerForm",
-    userId: existingUser ? existingUser.id : null
+    userId: existingUser ? existingUser.id : null,
+    emailVerified: existingReg?.emailVerified || false,
+    emailVerificationToken
   };
 
   // Update memory partnerRegistrations
@@ -2697,6 +2720,8 @@ app.post("/api/auth/register-partner", async (req, res) => {
       role: "vendor",
       vendorId: vendorId,
       password: tempPassword,
+      emailVerified: false,
+      emailVerificationToken,
       createdAt: createdAt
     };
     if (!db.users) db.users = [];
@@ -2711,11 +2736,12 @@ app.post("/api/auth/register-partner", async (req, res) => {
     }
   }
 
-  // Safely attempt confirmation email sending without breaking registration flow
+  // Send verification email. The vendor must confirm the email before first login.
+  let emailDispatch: any = null;
   try {
-    await sendVendorWelcomeEmail(name, companyName, emailLower);
+    emailDispatch = await sendVendorEmailVerification(name, companyName, emailLower, emailVerificationToken);
   } catch (emailErr) {
-    console.error("[Email Failure Non-Blocking Log] Vendor confirmation email sending failed:", emailErr);
+    console.error("[Vendor Verification Email Failure]", emailErr);
   }
 
   // Send alert to Admin (wrapped in try-catch so it doesn't break flow)
@@ -2783,7 +2809,7 @@ app.post("/api/auth/register-partner", async (req, res) => {
   db.currentUser = demoUser;
   saveDb();
 
-  res.status(201).json({ success: true, user: demoUser, vendor: demoVen });
+  res.status(201).json({ success: true, user: demoUser, vendor: demoVen, emailSent: !!emailDispatch?.success, emailSimulated: !!emailDispatch?.simulated, requiresEmailVerification: true, message: "Registration received. Please confirm your email before logging in." });
 });
 
 // API - Sign Up
