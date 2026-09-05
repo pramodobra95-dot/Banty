@@ -25,8 +25,27 @@ const CACHE_KEY_BY_TABLE: Record<string, string> = {
   settings: "cache_settings"
 };
 
+// These tables must never be fetched by automated crawlers. They are intentionally
+// not part of the browser cache because they can contain user/business data.
+const BOT_BLOCKED_TABLES = new Set([
+  "categories",
+  "products",
+  "vendors",
+  "trusted_vendors",
+  "marketing_banners",
+  "blogs",
+  "testimonials",
+  "banners",
+  "settings",
+  "leads",
+  "notifications",
+  "profiles"
+]);
+
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const BOT_UA = /(Googlebot|Google-InspectionTool|bingbot|BingPreview|LinkedInBot|facebookexternalhit|Twitterbot|Slackbot|Discordbot|WhatsApp)/i;
+// Include common search/social crawlers plus headless browser agents used by
+// automated rendering/indexing systems. Normal Chrome/Android users are unaffected.
+const BOT_UA = /(Googlebot|Google-InspectionTool|GoogleOther|bingbot|BingPreview|LinkedInBot|facebookexternalhit|Twitterbot|Slackbot|Discordbot|WhatsApp|HeadlessChrome)/i;
 
 const getCacheTimestampKey = (cacheKey: string) => `${cacheKey}_fetched_at`;
 
@@ -34,18 +53,31 @@ const cachedSupabaseFetch: typeof fetch = async (input, init) => {
   const request = new Request(input, init);
   const url = new URL(request.url);
   const tableMatch = url.pathname.match(/\/rest\/v1\/([^/]+)$/);
-  const table = tableMatch?.[1];
-  const cacheKey = table ? CACHE_KEY_BY_TABLE[decodeURIComponent(table)] : undefined;
+  const table = tableMatch?.[1] ? decodeURIComponent(tableMatch[1]) : undefined;
+  const cacheKey = table ? CACHE_KEY_BY_TABLE[table] : undefined;
+  const isBot = typeof window !== "undefined" && BOT_UA.test(navigator.userAgent || "");
 
   // Never interfere with writes, auth, storage, or non-table endpoints.
-  if (request.method !== "GET" || !cacheKey || typeof window === "undefined") {
+  if (request.method !== "GET" || typeof window === "undefined") {
     return fetch(input, init);
   }
 
-  // Search/social crawlers should never execute expensive public Supabase reads.
-  // The site's prerendered/static HTML and sitemap remain crawlable; this only stops
-  // client-side hydration from generating unnecessary REST traffic for bots.
-  if (BOT_UA.test(navigator.userAgent || "")) {
+  // Search/social crawlers and headless renderers should not execute expensive
+  // Supabase REST reads. Return an empty successful payload locally instead.
+  // This also protects private tables (leads/notifications/profiles) without caching them.
+  if (isBot && table && BOT_BLOCKED_TABLES.has(table)) {
+    return new Response("[]", {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Banty-Bot-Guard": "1"
+      }
+    });
+  }
+
+  // Search/social crawlers should not execute expensive public Supabase reads.
+  if (isBot && cacheKey) {
     return new Response("[]", {
       status: 200,
       headers: {
@@ -54,6 +86,11 @@ const cachedSupabaseFetch: typeof fetch = async (input, init) => {
         "X-Banty-Bot-Guard": "1"
       }
     });
+  }
+
+  // Only public/read-only tables participate in the cache.
+  if (!cacheKey) {
+    return fetch(input, init);
   }
 
   const cachedRaw = window.localStorage.getItem(cacheKey);
