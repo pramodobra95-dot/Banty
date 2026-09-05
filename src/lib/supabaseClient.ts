@@ -155,6 +155,27 @@ export const supabase = createClient(finalUrl, finalKey, {
   }
 });
 
+// Crawlers and headless renderers do not need live database subscriptions.
+// Returning a no-op channel prevents Supabase Realtime from opening WebSockets
+// during automated rendering while leaving normal browsers fully unchanged.
+if (typeof window !== "undefined" && BOT_UA.test(navigator.userAgent || "")) {
+  const realChannel = supabase.channel.bind(supabase);
+  (supabase as any).channel = (...args: any[]) => {
+    const topic = `banty-bot-${String(args[0] || "realtime")}`;
+    return {
+      topic,
+      on: () => ({}),
+      subscribe: (callback?: (status: string) => void) => {
+        callback?.("CLOSED");
+        return { unsubscribe: async () => "ok" };
+      },
+      unsubscribe: async () => "ok",
+      send: async () => ({ status: "ok" })
+    };
+  };
+  void realChannel;
+}
+
 /**
  * Utility functions for syncing/performing actions.
  * If Supabase is configured, we can do direct calls, otherwise we can log a warning or route to standard REST API fallbacks.
