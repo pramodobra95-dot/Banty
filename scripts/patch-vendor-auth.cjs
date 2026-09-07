@@ -47,3 +47,62 @@ if (source.includes(productApiPatch)) {
 }
 
 fs.writeFileSync(file, source, 'utf8');
+
+// Product-first paint patch: the homepage must not wait for the full dashboard data
+// bundle before showing the catalog. Fetch only the lightweight product card fields
+// independently and put them into the existing product state immediately. This does
+// not touch leads, vendors, blogs, banners, notifications, or their fetch flows.
+const appFile = path.join(process.cwd(), 'src', 'App.tsx');
+let appSource = fs.readFileSync(appFile, 'utf8');
+const productFastMarker = '  // PRODUCT-FIRST CATALOG REFRESH: load catalog independently from dashboard data';
+const productFastPatch = [
+  productFastMarker,
+  '  useEffect(() => {',
+  '    if (!isSupabaseConfigured) return;',
+  '    let cancelled = false;',
+  '    const refreshCatalogFirst = async () => {',
+  '      try {',
+  '        const { data, error } = await supabase',
+  '          .from("products")',
+  '          .select("id,name,description,images,pricing,features,rating,category,vendorId,vendorName,isFeatured,approved,views,brochureUrl,videoUrl,faqs,createdAt,showSimilar")',
+  '          .eq("approved", true)',
+  '          .order("createdAt", { ascending: false });',
+  '        if (!cancelled && !error && Array.isArray(data)) {',
+  '          setProducts(data as Product[]);',
+  '          try { localStorage.setItem("cache_products", JSON.stringify(data)); } catch {}',
+  '        }',
+  '      } catch (err) {',
+  '        console.warn("Catalog-first refresh failed; keeping cached products:", err);',
+  '      }',
+  '    };',
+  '    refreshCatalogFirst();',
+  '    return () => { cancelled = true; };',
+  '  }, []);',
+  ''
+].join('\n');
+
+const productFastInsertMarker = '  // Fetch all states from Supabase or Express fullstack API on mount';
+if (!appSource.includes(productFastMarker)) {
+  if (!appSource.includes(productFastInsertMarker)) {
+    throw new Error('App catalog fetch marker not found; refusing to modify App.tsx.');
+  }
+  appSource = appSource.replace(productFastInsertMarker, productFastPatch + productFastInsertMarker);
+  fs.writeFileSync(appFile, appSource, 'utf8');
+  console.log('[Catalog Speed Patch] Added independent product-first refresh.');
+} else {
+  console.log('[Catalog Speed Patch] Independent product-first refresh already present.');
+}
+
+// Remove the visible blurred/skeleton product cards. The catalog should render real
+// product cards whenever data exists and otherwise remain clean rather than showing
+// fake loading placeholders. Only the two product-grid branches in HomeView are touched.
+const homeFile = path.join(process.cwd(), 'src', 'components', 'HomeView.tsx');
+let homeSource = fs.readFileSync(homeFile, 'utf8');
+const skeletonMarker = '            {products.length === 0 ? (';
+if (homeSource.includes(skeletonMarker)) {
+  homeSource = homeSource.replace(/\{products\.length === 0 \? \(/g, '{false ? (');
+  fs.writeFileSync(homeFile, homeSource, 'utf8');
+  console.log('[Catalog UI Patch] Removed product skeleton placeholders from homepage grids.');
+} else {
+  console.log('[Catalog UI Patch] Product skeleton placeholders already removed.');
+}
